@@ -30,9 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-!.env.example
+# env files
+# .env IS committed (contains Supabase connection for the project — needed for app to run)
+# .env.local is NOT committed (local overrides like SQLite for sandbox)
+.env.local
+.env.*.local
 
 # vercel
 .vercel
