@@ -432,3 +432,37 @@ Stage Summary:
 - ✅ Sticky footer, responsive layout, dark mode
 - ✅ Bahasa Malaysia throughout (matches PRD requirement)
 - Dev server running on port 3000 for user preview
+
+---
+Task ID: 6
+Agent: main-orchestrator
+Task: Migrate database to Supabase PostgreSQL + deploy to GitHub
+
+Work Log:
+- Analyzed Supabase connection details provided by user
+- Discovered: direct DB host (db.scpcngecvirvakdjxngu.supabase.co) is IPv6-only, sandbox has no IPv6 connectivity
+- Discovered: Supabase connection pooler (aws-0-*.pooler.supabase.com) doesn't recognize the project tenant yet (new project, pooler still provisioning)
+- Pragmatic solution: generated complete SQL setup file instead of direct connection
+- Changed prisma/schema.prisma provider from "sqlite" to "postgresql"
+- Configured .env with Supabase connection pooler URL (ap-southeast-1, password URL-encoded @ as %40)
+- Used prisma migrate diff to generate 198-line DDL schema SQL
+- Created prisma/gen-seed-sql.ts to dump SQLite data → PostgreSQL INSERT SQL (138 INSERT statements, timestamps converted from epoch ms to to_timestamp())
+- Combined into supabase-setup.sql (396 lines): full schema + seed data for Supabase SQL Editor
+- Created .env.example (template with placeholders, no real credentials)
+- Removed .env from git tracking (git rm --cached) to protect credentials
+- Updated .gitignore: .env* with !.env.example exception
+- Created dev-sqlite.sh: local development script that switches Prisma to SQLite for sandbox/preview
+- Created .env.local (gitignored) with SQLite URL for local preview
+- Updated README.md: Supabase setup instructions, dual-database documentation
+- Verified app works end-to-end on local SQLite via Agent Browser (login → dashboard → all modules)
+- Committed and pushed to GitHub (commit 41f154e)
+
+Stage Summary:
+- ✅ Prisma schema configured for PostgreSQL/Supabase
+- ✅ supabase-setup.sql ready to run in Supabase SQL Editor (creates all 12 tables + 138 seed records)
+- ✅ .env with Supabase credentials (local, NOT committed)
+- ✅ .env.example template (committed, no credentials)
+- ✅ dev-sqlite.sh for local SQLite fallback
+- ✅ All changes pushed to https://github.com/syikinshah/pengurusanprojekperkeso
+- ✅ No sensitive data (passwords, tokens) in the committed code
+- ✅ Local preview still works via .env.local SQLite override
