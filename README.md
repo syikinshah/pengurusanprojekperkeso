@@ -21,11 +21,13 @@ Dibangunkan mengikut **Dokumen Keperluan Produk (PRD) v1.0** bertarikh 29 Julai 
 | Framework | Next.js 16 (App Router) |
 | Bahasa | TypeScript 5 |
 | Styling | Tailwind CSS 4 + shadcn/ui (New York) |
-| Pangkalan Data | Prisma ORM + SQLite (dummy/POC) |
+| Pangkalan Data | **Supabase (PostgreSQL)** + Prisma ORM |
 | Carta | Recharts |
 | State | Zustand (client) + TanStack Query (server) |
 | Ikon | Lucide React |
 | Auth | Cookie-based session (HMAC-like signing, POC) |
+
+> **Pangkalan Data**: Supabase PostgreSQL (production) — lihat bahagian pemasangan di bawah. SQLite tersedia sebagai fallback untuk pembangunan tempatan.
 
 ---
 
@@ -89,18 +91,49 @@ Dibangunkan mengikut **Dokumen Keperluan Produk (PRD) v1.0** bertarikh 29 Julai 
 
 ## 🚀 Pemasangan & Menjalankan
 
+### Pilihan A: Supabase PostgreSQL (Production)
+
 ```bash
-# Pasang dependencies
+# 1. Pasang dependencies
 bun install
 
-# Sync pangkalan data dummy
-bun run db:push
-bun run prisma/seed.ts
+# 2. Cipta pangkalan data di Supabase
+#    Buka Supabase Dashboard → SQL Editor
+#    Salin & tampal kandungan fail: supabase-setup.sql
+#    Klik "Run" untuk cipta skema + data dummy
 
-# Jalankan pelayan pembangunan
+# 3. Konfigurasi .env (sudah disediakan)
+#    DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres
+#    atau guna connection pooler:
+#    DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+
+# 4. Jana Prisma client
+bun run db:generate
+
+# 5. Jalankan pelayan
 bun run dev
 # Buka http://localhost:3000
 ```
+
+### Pilihan B: SQLite (Pembangunan Tempatan / Preview)
+
+```bash
+# Untuk persekitaran tanpa akses Supabase (cth: sandbox)
+bash dev-sqlite.sh
+# Skrip ini menukar Prisma ke SQLite, jana semula client, dan mulakan dev server
+```
+
+### Konfigurasi Supabase
+
+| Tetapan | Nilai |
+|---------|-------|
+| Project URL | `https://scpcngecvirvakdjxngu.supabase.co` |
+| Project Ref | `scpcngecvirvakdjxngu` |
+| Region | ap-southeast-1 (Singapore) |
+| Connection String (Direct) | `postgresql://postgres:[PASSWORD]@db.scpcngecvirvakdjxngu.supabase.co:5432/postgres` |
+| Connection String (Pooler) | `postgresql://postgres.scpcngecvirvakdjxngu:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres` |
+
+> **Nota**: Kata laluan mengandungi `@` — URL-encode sebagai `%40` dalam connection string.
 
 ### Akaun Demo (Pangkalan Data Dummy)
 
@@ -172,21 +205,28 @@ src/
     └── types.ts                 # Jenis dikongsi + pembantu format
 
 prisma/
-├── schema.prisma               # Skema 12 model
-└── seed.ts                     # Data dummy realistik PERKESO
+├── schema.prisma               # Skema 12 model (PostgreSQL/Supabase)
+├── seed.ts                     # Data dummy realistik PERKESO
+└── gen-seed-sql.ts             # Penjana SQL dari data SQLite
+
+supabase-setup.sql              # Skrip SQL lengkap (skema + data) untuk Supabase
+dev-sqlite.sh                   # Skrip pembangunan tempatan (SQLite fallback)
+.env                            # Konfigurasi Supabase (committed)
+.env.local                      # Override tempatan (gitignored)
 ```
 
 ---
 
 ## 🔒 Nota Keselamatan (POC)
 
-Sistem ini adalah **Proof of Concept** dengan pangkalan data dummy:
+Sistem ini adalah **Proof of Concept**:
 - Pengesahan sesi berasaskan cookie dengan tandatangan HMAC-like (bukan produksi)
 - Kata laluan disimpan sebagai `hash_<plain>` (POC sahaja, gantikan dengan bcrypt/argon2 untuk produksi)
 - Tiada integrasi dengan sistem kewangan rasmi PERKESO (iGFMAS)
 - Data kewangan sebenar/sensitif TIDAK disimpan
+- **Pangkalan data**: Supabase PostgreSQL (cloud) — rujuk `.env` untuk konfigurasi
 
-Untuk fasa produksi: gantikan pangkalan data SQLite dengan PostgreSQL/MySQL, guna NextAuth.js/bcrypt, dan tambah pengesahan dua faktor (2FA).
+Untuk fasa produksi: guna NextAuth.js/bcrypt, tambah pengesahan dua faktor (2FA), dan konfigurasi RLS (Row Level Security) Supabase.
 
 ---
 
