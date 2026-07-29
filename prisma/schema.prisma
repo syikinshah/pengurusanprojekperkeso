@@ -1,0 +1,213 @@
+// Prisma schema for LMS-ITS (PERKESO PMU)
+// Learning Management System + Invoice Payment Tracking
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================
+// AUTH & USERS
+// ============================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  role         String   @default("trainee") // admin | project_manager | project_admin | trainee | upper_management
+  department   String   @default("PMU")
+  position     String?
+  phone        String?
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  enrollments       Enrollment[]
+  quizAttempts      QuizAttempt[]
+  coursesCreated    Course[]
+  projectsManaged   Project[]        @relation("ProjectManager")
+  invoicesApproved  Invoice[]        @relation("ApprovedBy")
+  invoicesCreated   Invoice[]        @relation("CreatedBy")
+  notifications     Notification[]
+  invoiceHistory    InvoiceHistory[]
+}
+
+// ============================
+// LMS MODULE
+// ============================
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String   @default("Umum") // Teknikal | Pengurusan | Kewangan | Teknologi | Umum
+  level       String   @default("Pertengahan") // Asas | Pertengahan | Lanjutan
+  duration    Float    @default(0) // in hours
+  instructor  String?
+  thumbnailUrl String?
+  status      String   @default("aktif") // aktif | tidak_aktif | draf
+  createdBy   String
+  creator     User     @relation(fields: [createdBy], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  materials   Material[]
+  quizzes      Quiz[]
+  enrollments Enrollment[]
+}
+
+model Material {
+  id          String   @id @default(cuid())
+  courseId     String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  type        String   @default("pdf") // pdf | video | slide | link | document
+  url         String
+  description String?
+  duration    Float?   // minutes
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Enrollment {
+  id             String   @id @default(cuid())
+  userId         String
+  courseId       String
+  user           User     @relation(fields: [userId], references: [id])
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress       Float    @default(0) // 0 - 100
+  status         String   @default("belum_mula") // belum_mula | dalam_proses | selesai
+  enrolledAt     DateTime @default(now())
+  completedAt    DateTime?
+  certificateUrl String?
+  lastAccessedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, courseId])
+}
+
+model Quiz {
+  id          String   @id @default(cuid())
+  courseId     String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  passScore   Float    @default(60) // percentage
+  duration    Int      @default(15) // minutes
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  questions   Question[]
+  attempts    QuizAttempt[]
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  quizId    String
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  text      String
+  type      String   @default("single") // single | multiple | true_false
+  options   String   // JSON string array e.g. ["Option A","Option B"]
+  answer    String   // JSON string array of correct option indexes e.g. [0] or [0,2]
+  points    Int      @default(1)
+  order     Int      @default(0)
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  quizId      String
+  userId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+  score       Float    @default(0) // percentage
+  totalPoints Int      @default(0)
+  earnedPoints Int     @default(0)
+  passed      Boolean  @default(false)
+  answers     String   // JSON: { questionId: [selectedIndexes] }
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+}
+
+// ============================
+// PROJECTS & INVOICE MODULE
+// ============================
+
+model Project {
+  id              String   @id @default(cuid())
+  projectName     String
+  description     String?
+  budget          Float    @default(0) // RM
+  projectManagerId String?
+  projectManager  User?    @relation("ProjectManager", fields: [projectManagerId], references: [id])
+  status          String   @default("aktif") // aktif | selesai | ditangguh | dibatalkan
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  invoices        Invoice[]
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  invoiceNo     String   @unique
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vendorName    String
+  vendorEmail   String?
+  amount        Float    // RM
+  invoiceDate   DateTime
+  dueDate       DateTime
+  status        String   @default("draf") // draf | menunggu_kelulusan | diluluskan | dibayar | ditolak | tertunggak
+  attachmentUrl String?
+  attachmentName String?
+  approvedById  String?
+  approvedBy    User?    @relation("ApprovedBy", fields: [approvedById], references: [id])
+  approvedAt    DateTime?
+  paidAt        DateTime?
+  remarks       String?
+  createdById   String?
+  createdBy     User?    @relation("CreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  history       InvoiceHistory[]
+}
+
+model InvoiceHistory {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  action      String   // created | status_changed | approved | rejected | paid | edited | note_added
+  fromStatus  String?
+  toStatus    String?
+  remarks     String?
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+// ============================
+// NOTIFICATIONS
+// ============================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("info") // info | success | warning | error
+  category  String   @default("invoice") // invoice | course | system | general
+  isRead    Boolean  @default(false)
+  link      String?  // optional navigation hint
+  createdAt DateTime @default(now())
+}

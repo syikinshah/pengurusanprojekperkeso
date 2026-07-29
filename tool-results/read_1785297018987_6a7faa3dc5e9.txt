@@ -1,0 +1,470 @@
+     1→import { PrismaClient } from '@prisma/client'
+     2→
+     3→const db = new PrismaClient()
+     4→
+     5→// Hash a simple password (dummy, plaintext for POC)
+     6→const hash = (p: string) => `hash_${p}`
+     7→
+     8→async function main() {
+     9→  console.log('🌱 Seeding LMS-ITS database...')
+    10→
+    11→  // Clear existing data
+    12→  await db.notification.deleteMany()
+    13→  await db.invoiceHistory.deleteMany()
+    14→  await db.invoice.deleteMany()
+    15→  await db.project.deleteMany()
+    16→  await db.quizAttempt.deleteMany()
+    17→  await db.question.deleteMany()
+    18→  await db.quiz.deleteMany()
+    19→  await db.material.deleteMany()
+    20→  await db.enrollment.deleteMany()
+    21→  await db.course.deleteMany()
+    22→  await db.user.deleteMany()
+    23→
+    24→  // ============================
+    25→  // USERS
+    26→  // ============================
+    27→  const users = await Promise.all([
+    28→    db.user.create({ data: { email: 'admin@perkeso.gov.my', password: hash('admin123'), name: 'Aisyah binti Rahman', role: 'admin', department: 'PMU', position: 'Pentadbir Sistem', phone: '+603-4264-5555' } }),
+    29→    db.user.create({ data: { email: 'pm@perkeso.gov.my', password: hash('pm123'), name: 'Mohd Faizal bin Hassan', role: 'project_manager', department: 'PMU', position: 'Pengurus Projek Senior', phone: '+603-4264-5556' } }),
+    30→    db.user.create({ data: { email: 'pm2@perkeso.gov.my', password: hash('pm123'), name: 'Siti Nurhaliza binti Abdullah', role: 'project_manager', department: 'PMU', position: 'Pengurus Projek', phone: '+603-4264-5557' } }),
+    31→    db.user.create({ data: { email: 'padmin@perkeso.gov.my', password: hash('padmin123'), name: 'Tan Wei Ming', role: 'project_admin', department: 'PMU', position: 'Pentadbir Projek', phone: '+603-4264-5558' } }),
+    32→    db.user.create({ data: { email: 'padmin2@perkeso.gov.my', password: hash('padmin123'), name: 'Lim Mei Ling', role: 'project_admin', department: 'PMU', position: 'Pentadbir Projek', phone: '+603-4264-5559' } }),
+    33→    db.user.create({ data: { email: 'staff1@perkeso.gov.my', password: hash('staff123'), name: 'Nurul Aini binti Yusof', role: 'trainee', department: 'PMU', position: 'Pegawai Latihan', phone: '+603-4264-5560' } }),
+    34→    db.user.create({ data: { email: 'staff2@perkeso.gov.my', password: hash('staff123'), name: 'Ahmad Zulkifli bin Ibrahim', role: 'trainee', department: 'PMU', position: 'Pegawai Operasi', phone: '+603-4264-5561' } }),
+    35→    db.user.create({ data: { email: 'staff3@perkeso.gov.my', password: hash('staff123'), name: 'Kavitha a/p Raju', role: 'trainee', department: 'PMU', position: 'Pegawai Kewangan', phone: '+603-4264-5562' } }),
+    36→    db.user.create({ data: { email: 'staff4@perkeso.gov.my', password: hash('staff123'), name: 'Roziana binti Othman', role: 'trainee', department: 'PMU', position: 'Pegawai Pentadbiran', phone: '+603-4264-5563' } }),
+    37→    db.user.create({ data: { email: 'upper@perkeso.gov.my', password: hash('upper123'), name: 'Dato\' Ramli bin Saad', role: 'upper_management', department: 'PMU', position: 'Pengurus Atasan', phone: '+603-4264-5500' } }),
+    38→  ])
+    39→
+    40→  const [admin, pm1, pm2, padmin1, padmin2, t1, t2, t3, t4] = users
+    41→  console.log(`✓ Created ${users.length} users`)
+    42→
+    43→  // ============================
+    44→  // COURSES (LMS)
+    45→  // ============================
+    46→  const courses = await Promise.all([
+    47→    db.course.create({
+    48→      data: {
+    49→        title: 'Asas Pengurusan Projek (PMBOK 7)',
+    50→        description: 'Kursus asas pengurusan projek mengikut rangka kerja PMBOK edisi ke-7. Merangkumi 5 kumpulan proses dan 10 kawasan pengetahuan.',
+    51→        category: 'Pengurusan',
+    52→        level: 'Asas',
+    53→        duration: 12,
+    54→        instructor: 'Mohd Faizal bin Hassan',
+    55→        status: 'aktif',
+    56→        createdBy: padmin1.id,
+    57→      }
+    58→    }),
+    59→    db.course.create({
+    60→      data: {
+    61→        title: 'Agile & Scrum Methodology',
+    62→        description: 'Pengenalan kepada metodologi Agile dan rangka kerja Scrum untuk pengurusan projek software. Termasuk peranan Scrum Master, Product Owner dan acara-acara Scrum.',
+    63→        category: 'Teknikal',
+    64→        level: 'Pertengahan',
+    65→        duration: 8,
+    66→        instructor: 'Tan Wei Ming',
+    67→        status: 'aktif',
+    68→        createdBy: padmin1.id,
+    69→      }
+    70→    }),
+    71→    db.course.create({
+    72→      data: {
+    73→        title: 'Pengurusan Invois & Kawalan Kewangan Projek',
+    74→        description: 'Kursus pengurusan kewangan projek, penjejakan invois, kawalan bajet dan pelaporan kewangan mengikut garis panduan perbendaharaan.',
+    75→        category: 'Kewangan',
+    76→        level: 'Pertengahan',
+    77→        duration: 10,
+    78→        instructor: 'Lim Mei Ling',
+    79→        status: 'aktif',
+    80→        createdBy: padmin2.id,
+    81→      }
+    82→    }),
+    83→    db.course.create({
+    84→      data: {
+    85→        title: 'Keselamatan Siber & Perlindungan Data',
+    86→        description: 'Kesedaran keselamatan siber, perlindungan data peribadi (PDPA), dan amalan terbaik keselamatan maklumat untuk kakitangan.',
+    87→        category: 'Teknologi',
+    88→        level: 'Asas',
+    89→        duration: 6,
+    90→        instructor: 'Tan Wei Ming',
+    91→        status: 'aktif',
+    92→        createdBy: padmin1.id,
+    93→      }
+    94→    }),
+    95→    db.course.create({
+    96→      data: {
+    97→        title: 'Microsoft Power BI untuk Pelaporan Projek',
+    98→        description: 'Membina dashboard interaktif dan laporan visual menggunakan Power BI untuk pemantauan prestasi dan kewangan projek.',
+    99→        category: 'Teknologi',
+   100→        level: 'Lanjutan',
+   101→        duration: 14,
+   102→        instructor: 'Lim Mei Ling',
+   103→        status: 'aktif',
+   104→        createdBy: padmin2.id,
+   105→      }
+   106→    }),
+   107→    db.course.create({
+   108→      data: {
+   109→        title: 'Komunikasi Berkesan & Pengurusan Pasukan',
+   110→        description: 'Kemahiran komunikasi profesional, pengurusan konflik dalam pasukan, dan kepimpinan kolaboratif untuk pengurus projek.',
+   111→        category: 'Pengurusan',
+   112→        level: 'Pertengahan',
+   113→        duration: 9,
+   114→        instructor: 'Siti Nurhaliza binti Abdullah',
+   115→        status: 'aktif',
+   116→        createdBy: padmin2.id,
+   117→      }
+   118→    }),
+   119→    db.course.create({
+   120→      data: {
+   121→        title: 'Procurement & Kontrak Vendor PERKESO',
+   122→        description: 'Proses perolehan, pengurusan kontrak vendor, penilaian prestasi vendor dan pematuhan polisi perbendaharaan.',
+   123→        category: 'Pengurusan',
+   124→        level: 'Lanjutan',
+   125→        duration: 11,
+   126→        instructor: 'Mohd Faizal bin Hassan',
+   127→        status: 'draf',
+   128→        createdBy: padmin1.id,
+   129→      }
+   130→    }),
+   131→  ])
+   132→  console.log(`✓ Created ${courses.length} courses`)
+   133→
+   134→  // ============================
+   135→  // MATERIALS
+   136→  // ============================
+   137→  const materialsData = [
+   138→    // Course 0: Asas Pengurusan Projek
+   139→    { courseIdx: 0, title: 'Pengenalan PMBOK 7 - Sistem Penyampaian Nilai', type: 'pdf', url: '/materials/pmbok7-intro.pdf', duration: 45, order: 1 },
+   140→    { courseIdx: 0, title: 'Video: 12 Prinsip Pengurusan Projek', type: 'video', url: '/materials/pmbok-principles.mp4', duration: 30, order: 2 },
+   141→    { courseIdx: 0, title: 'Slaid: Kumpulan Proses & Kawasan Pengetahuan', type: 'slide', url: '/materials/pmbok-processes.pdf', duration: 60, order: 3 },
+   142→    { courseIdx: 0, title: 'Dokumen: Templat Rancangan Projek (Project Charter)', type: 'document', url: '/materials/project-charter-template.docx', duration: 20, order: 4 },
+   143→    // Course 1: Agile & Scrum
+   144→    { courseIdx: 1, title: 'Pengenalan Agile Manifesto', type: 'pdf', url: '/materials/agile-manifesto.pdf', duration: 25, order: 1 },
+   145→    { courseIdx: 1, title: 'Video: Scrum Framework Overview', type: 'video', url: '/materials/scrum-overview.mp4', duration: 40, order: 2 },
+   146→    { courseIdx: 1, title: 'Slaid: Acara-acara Scrum', type: 'slide', url: '/materials/scrum-events.pdf', duration: 35, order: 3 },
+   147→    // Course 2: Pengurusan Invois
+   148→    { courseIdx: 2, title: 'Garis Panduan Pengurusan Invois PERKESO', type: 'pdf', url: '/materials/invoice-guidelines.pdf', duration: 50, order: 1 },
+   149→    { courseIdx: 2, title: 'Video: Aliran Kelulusan Invois', type: 'video', url: '/materials/invoice-approval-flow.mp4', duration: 25, order: 2 },
+   150→    { courseIdx: 2, title: 'Slaid: Kawalan Bajet Projek', type: 'slide', url: '/materials/budget-control.pdf', duration: 45, order: 3 },
+   151→    // Course 3: Keselamatan Siber
+   152→    { courseIdx: 3, title: 'Pengenalan PDPA & Perlindungan Data', type: 'pdf', url: '/materials/pdpa-intro.pdf', duration: 30, order: 1 },
+   153→    { courseIdx: 3, title: 'Video: Phishing & Ancaman Siber', type: 'video', url: '/materials/phishing-threats.mp4', duration: 20, order: 2 },
+   154→    // Course 4: Power BI
+   155→    { courseIdx: 4, title: 'Pemasangan & Persediaan Power BI Desktop', type: 'pdf', url: '/materials/powerbi-setup.pdf', duration: 40, order: 1 },
+   156→    { courseIdx: 4, title: 'Video: Membina Visual Asas', type: 'video', url: '/materials/powerbi-visuals.mp4', duration: 55, order: 2 },
+   157→    { courseIdx: 4, title: 'Slaid: DAX Functions Asas', type: 'slide', url: '/materials/dax-basics.pdf', duration: 60, order: 3 },
+   158→    // Course 5: Komunikasi
+   159→    { courseIdx: 5, title: 'Prinsip Komunikasi Berkesan', type: 'pdf', url: '/materials/communication-principles.pdf', duration: 35, order: 1 },
+   160→    { courseIdx: 5, title: 'Video: Pengurusan Konflik', type: 'video', url: '/materials/conflict-management.mp4', duration: 30, order: 2 },
+   161→    // Course 6: Procurement
+   162→    { courseIdx: 6, title: 'Proses Perolehan PERKESO', type: 'pdf', url: '/materials/procurement-process.pdf', duration: 60, order: 1 },
+   163→  ]
+   164→
+   165→  for (const m of materialsData) {
+   166→    await db.material.create({
+   167→      data: {
+   168→        courseId: courses[m.courseIdx].id,
+   169→        title: m.title,
+   170→        type: m.type,
+   171→        url: m.url,
+   172→        duration: m.duration,
+   173→        order: m.order,
+   174→      }
+   175→    })
+   176→  }
+   177→  console.log(`✓ Created ${materialsData.length} materials`)
+   178→
+   179→  // ============================
+   180→  // QUIZZES & QUESTIONS
+   181→  // ============================
+   182→  const quiz1 = await db.quiz.create({
+   183→    data: {
+   184→      courseId: courses[0].id,
+   185→      title: 'Penilaian Asas PMBOK 7',
+   186→      description: 'Ujian kefahaman konsep asas PMBOK 7 edisi.',
+   187→      passScore: 70,
+   188→      duration: 20,
+   189→      order: 1,
+   190→    }
+   191→  })
+   192→  const q1Questions = [
+   193→    { text: 'Berapakah kumpulan proses (process groups) dalam PMBOK 7?', type: 'single', options: JSON.stringify(['3', '5', '7', '10']), answer: JSON.stringify([1]), points: 2 },
+   194→    { text: 'Yang manakah kawasan pengetahuan (knowledge area) dalam PMBOK?', type: 'multiple', options: JSON.stringify(['Pengurusan Skop', 'Pengurusan Masa', 'Pengurusan Pasukan', 'Semua di atas']), answer: JSON.stringify([3]), points: 2 },
+   195→    { text: 'Project Charter adalah dokumen yang diluluskan oleh penaja projek.', type: 'true_false', options: JSON.stringify(['Benar', 'False']), answer: JSON.stringify([0]), points: 1 },
+   196→    { text: 'Manakah yang BUKAN merupakan prinsip PMBOK 7?', type: 'single', options: JSON.stringify(['Kepimpinan Berbelas kasihan', 'Pemikiran Sistem', 'Pengurusan Hierarki', 'Menyesuaikan dengan kompleksiti']), answer: JSON.stringify([2]), points: 2 },
+   197→    { text: 'Risk Management adalah sebahagian daripada kawasan pengetahuan PMBOK.', type: 'true_false', options: JSON.stringify(['Benar', 'False']), answer: JSON.stringify([0]), points: 1 },
+   198→  ]
+   199→  for (let i = 0; i < q1Questions.length; i++) {
+   200→    await db.question.create({ data: { quizId: quiz1.id, ...q1Questions[i], order: i + 1 } })
+   201→  }
+   202→
+   203→  const quiz2 = await db.quiz.create({
+   204→    data: {
+   205→      courseId: courses[1].id,
+   206→      title: 'Penilaian Agile & Scrum',
+   207→      description: 'Ujian kefahaman metodologi Agile dan Scrum.',
+   208→      passScore: 60,
+   209→      duration: 15,
+   210→      order: 1,
+   211→    }
+   212→  })
+   213→  const q2Questions = [
+   214→    { text: 'Apakah tempoh standard Sprint dalam Scrum?', type: 'single', options: JSON.stringify(['1 minggu', '2-4 minggu', '1 bulan', '3 bulan']), answer: JSON.stringify([1]), points: 2 },
+   215→    { text: 'Yang manakah peranan utama dalam Scrum?', type: 'multiple', options: JSON.stringify(['Scrum Master', 'Product Owner', 'Project Sponsor', 'Developer']), answer: JSON.stringify([0, 1, 3]), points: 3 },
+   216→    { text: 'Daily Standup adalah mesyuarat formal berdurasi 1 jam.', type: 'true_false', options: JSON.stringify(['Benar', 'False']), answer: JSON.stringify([1]), points: 1 },
+   217→    { text: 'Apakah output utama Sprint Planning?', type: 'single', options: JSON.stringify(['Sprint Backlog', 'Product Backlog', 'Burndown Chart', 'Release Plan']), answer: JSON.stringify([0]), points: 2 },
+   218→  ]
+   219→  for (let i = 0; i < q2Questions.length; i++) {
+   220→    await db.question.create({ data: { quizId: quiz2.id, ...q2Questions[i], order: i + 1 } })
+   221→  }
+   222→
+   223→  const quiz3 = await db.quiz.create({
+   224→    data: {
+   225→      courseId: courses[2].id,
+   226→      title: 'Penilaian Pengurusan Invois',
+   227→      description: 'Ujian kefahaman aliran kelulusan invois dan kawalan kewangan.',
+   228→      passScore: 65,
+   229→      duration: 18,
+   230→      order: 1,
+   231→    }
+   232→  })
+   233→  const q3Questions = [
+   234→    { text: 'Status invois "Menunggu Kelulusan" bermaksud invois menunggu kelulusan daripada?', type: 'single', options: JSON.stringify(['Admin Sistem', 'Pengurus Projek', 'Pentadbir Projek', 'Peserta Latihan']), answer: JSON.stringify([1]), points: 2 },
+   235→    { text: 'Invois tertunggak (overdue) berlaku apabila?', type: 'multiple', options: JSON.stringify(['Tarikh matang telah dilebihi', 'Status masih belum dibayar', 'Vendor menuntut bayaran', 'Semua di atas']), answer: JSON.stringify([3]), points: 2 },
+   236→    { text: 'Audit trail invois merekodkan setiap perubahan status.', type: 'true_false', options: JSON.stringify(['Benar', 'False']), answer: JSON.stringify([0]), points: 1 },
+   237→    { text: 'Dokumen sokongan invois boleh dalam format?', type: 'multiple', options: JSON.stringify(['PDF', 'JPEG', 'PNG', 'Word']), answer: JSON.stringify([0, 1, 2]), points: 2 },
+   238→  ]
+   239→  for (let i = 0; i < q3Questions.length; i++) {
+   240→    await db.question.create({ data: { quizId: quiz3.id, ...q3Questions[i], order: i + 1 } })
+   241→  }
+   242→  console.log(`✓ Created 3 quizzes with ${q1Questions.length + q2Questions.length + q3Questions.length} questions`)
+   243→
+   244→  // ============================
+   245→  // ENROLLMENTS
+   246→  // ============================
+   247→  const enrollmentsData = [
+   248→    { userIdx: 5, courseIdx: 0, progress: 100, status: 'selesai', completedAt: new Date('2026-06-15'), certificateUrl: '/certs/cert-001.pdf' },
+   249→    { userIdx: 5, courseIdx: 1, progress: 60, status: 'dalam_proses' },
+   250→    { userIdx: 5, courseIdx: 3, progress: 100, status: 'selesai', completedAt: new Date('2026-07-02'), certificateUrl: '/certs/cert-002.pdf' },
+   251→    { userIdx: 6, courseIdx: 0, progress: 75, status: 'dalam_proses' },
+   252→    { userIdx: 6, courseIdx: 2, progress: 40, status: 'dalam_proses' },
+   253→    { userIdx: 6, courseIdx: 4, progress: 25, status: 'dalam_proses' },
+   254→    { userIdx: 7, courseIdx: 2, progress: 100, status: 'selesai', completedAt: new Date('2026-07-10'), certificateUrl: '/certs/cert-003.pdf' },
+   255→    { userIdx: 7, courseIdx: 5, progress: 50, status: 'dalam_proses' },
+   256→    { userIdx: 8, courseIdx: 0, progress: 0, status: 'belum_mula' },
+   257→    { userIdx: 8, courseIdx: 3, progress: 100, status: 'selesai', completedAt: new Date('2026-07-15'), certificateUrl: '/certs/cert-004.pdf' },
+   258→    { userIdx: 8, courseIdx: 5, progress: 80, status: 'dalam_proses' },
+   259→    { userIdx: 1, courseIdx: 1, progress: 100, status: 'selesai', completedAt: new Date('2026-05-20'), certificateUrl: '/certs/cert-005.pdf' },
+   260→    { userIdx: 2, courseIdx: 4, progress: 30, status: 'dalam_proses' },
+   261→  ]
+   262→  for (const e of enrollmentsData) {
+   263→    await db.enrollment.create({
+   264→      data: {
+   265→        userId: users[e.userIdx].id,
+   266→        courseId: courses[e.courseIdx].id,
+   267→        progress: e.progress,
+   268→        status: e.status,
+   269→        completedAt: e.completedAt || null,
+   270→        certificateUrl: e.certificateUrl || null,
+   271→        lastAccessedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+   272→      }
+   273→    })
+   274→  }
+   275→  console.log(`✓ Created ${enrollmentsData.length} enrollments`)
+   276→
+   277→  // ============================
+   278→  // PROJECTS
+   279→  // ============================
+   280→  const projects = await Promise.all([
+   281→    db.project.create({
+   282→      data: {
+   283→        projectName: 'Sistem Pentauliahan Pekerja (Onboarding Portal)',
+   284→        description: 'Pembangunan portal pentauliahan digital untuk pekerja baharu PERKESO.',
+   285→        budget: 450000,
+   286→        projectManagerId: pm1.id,
+   287→        status: 'aktif',
+   288→        startDate: new Date('2026-01-15'),
+   289→        endDate: new Date('2026-12-31'),
+   290→      }
+   291→    }),
+   292→    db.project.create({
+   293→      data: {
+   294→        projectName: 'Naik Taraf Sistem iGFMAS Modul Pembayaran',
+   295→        description: 'Penambahbaikan modul pembayaran dalam sistem kewangan iGFMAS.',
+   296→        budget: 1200000,
+   297→        projectManagerId: pm2.id,
+   298→        status: 'aktif',
+   299→        startDate: new Date('2026-02-01'),
+   300→        endDate: new Date('2027-01-31'),
+   301→      }
+   302→    }),
+   303→    db.project.create({
+   304→      data: {
+   305→        projectName: 'Pelaksanaan CRM untuk Cawangan PERKESO',
+   306→        description: 'Pengukuhan sistem pengurusan hubungan pelanggan di 10 cawangan utama.',
+   307→        budget: 850000,
+   308→        projectManagerId: pm1.id,
+   309→        status: 'aktif',
+   310→        startDate: new Date('2026-03-10'),
+   311→        endDate: new Date('2026-11-30'),
+   312→      }
+   313→    }),
+   314→    db.project.create({
+   315→      data: {
+   316→        projectName: 'Migrasi Data Pencen ke Cloud AWS',
+   317→        description: 'Pemindahan pangkalan data pencen lama kepada penyelesaian cloud AWS.',
+   318→        budget: 320000,
+   319→        projectManagerId: pm2.id,
+   320→        status: 'aktif',
+   321→        startDate: new Date('2026-04-01'),
+   322→        endDate: new Date('2026-09-30'),
+   323→      }
+   324→    }),
+   325→    db.project.create({
+   326→      data: {
+   327→        projectName: 'Latihan Keselamatan Siber Kakitangan 2026',
+   328→        description: 'Program latihan kesedaran keselamatan siber untuk semua kakitangan PERKESO.',
+   329→        budget: 180000,
+   330→        projectManagerId: pm1.id,
+   331→        status: 'selesai',
+   332→        startDate: new Date('2026-01-01'),
+   333→        endDate: new Date('2026-06-30'),
+   334→      }
+   335→    }),
+   336→    db.project.create({
+   337→      data: {
+   338→        projectName: 'Pembangunan Aplikasi Mobile PERKESO Care',
+   339→        description: 'Aplikasi mudah alih untuk carian caruman dan tuntutan PERKESO.',
+   340→        budget: 670000,
+   341→        projectManagerId: pm2.id,
+   342→        status: 'aktif',
+   343→        startDate: new Date('2026-02-15'),
+   344→        endDate: new Date('2027-02-14'),
+   345→      }
+   346→    }),
+   347→  ])
+   348→  console.log(`✓ Created ${projects.length} projects`)
+   349→
+   350→  // ============================
+   351→  // INVOICES
+   352→  // ============================
+   353→  const today = new Date()
+   354→  const daysAgo = (n: number) => new Date(today.getTime() - n * 86400000)
+   355→  const daysAhead = (n: number) => new Date(today.getTime() + n * 86400000)
+   356→
+   357→  const invoicesData: Array<{
+   358→    no: string; projIdx: number; vendor: string; vemail?: string; amount: number; invDate: Date; dueDate: Date; status: string; attachment?: string; attName?: string; approvedByIdx?: number; remarks?: string; createdByIdx: number;
+   359→  }> = [
+   360→    { no: 'INV-2026-001', projIdx: 0, vendor: 'TechSoft Solutions Sdn Bhd', vemail: 'finance@techsoft.com.my', amount: 45000, invDate: daysAgo(45), dueDate: daysAgo(15), status: 'dibayar', attachment: '/invoices/inv-001.pdf', attName: 'INV-2026-001-TechSoft.pdf', approvedByIdx: 1, remarks: 'Pembayaran fasa 1 - siap dan disahkan', createdByIdx: 3 },
+   361→    { no: 'INV-2026-002', projIdx: 0, vendor: 'DesignPro Studio', amount: 18000, invDate: daysAgo(20), dueDate: daysAhead(10), status: 'diluluskan', attachment: '/invoices/inv-002.pdf', attName: 'INV-2026-002-DesignPro.pdf', approvedByIdx: 1, remarks: 'Diluluskan untuk bayaran fasa 2', createdByIdx: 4 },
+   362→    { no: 'INV-2026-003', projIdx: 1, vendor: 'GlobalTech Systems Sdn Bhd', amount: 150000, invDate: daysAgo(15), dueDate: daysAgo(2), status: 'tertunggak', attachment: '/invoices/inv-003.pdf', attName: 'INV-2026-003-GlobalTech.pdf', approvedByIdx: 2, remarks: 'Diluluskan tetapi bayaran belum dibuat', createdByIdx: 3 },
+   363→    { no: 'INV-2026-004', projIdx: 1, vendor: 'DataNexus Sdn Bhd', amount: 75000, invDate: daysAgo(8), dueDate: daysAhead(22), status: 'menunggu_kelulusan', attachment: '/invoices/inv-004.pdf', attName: 'INV-2026-004-DataNexus.pdf', remarks: 'Menunggu semakan PM', createdByIdx: 4 },
+   364→    { no: 'INV-2026-005', projIdx: 2, vendor: 'CloudFirst Consulting', amount: 95000, invDate: daysAgo(30), dueDate: daysAgo(0), status: 'dibayar', attachment: '/invoices/inv-005.pdf', attName: 'INV-2026-005-CloudFirst.pdf', approvedByIdx: 1, remarks: 'Pembayaran siap', createdByIdx: 3 },
+   365→    { no: 'INV-2026-006', projIdx: 2, vendor: 'SalesForce Malaysia', amount: 280000, invDate: daysAgo(5), dueDate: daysAhead(25), status: 'menunggu_kelulusan', attachment: '/invoices/inv-006.pdf', attName: 'INV-2026-006-SalesForce.pdf', remarks: 'Jumlah besar - memerlukan kelulusan PM dan Kewangan', createdByIdx: 4 },
+   366→    { no: 'INV-2026-007', projIdx: 3, vendor: 'AWS Malaysia Sdn Bhd', amount: 60000, invDate: daysAgo(25), dueDate: daysAhead(5), status: 'diluluskan', attachment: '/invoices/inv-007.pdf', attName: 'INV-2026-007-AWS.pdf', approvedByIdx: 2, remarks: 'Diluluskan - bayaran dalam proses', createdByIdx: 3 },
+   367→    { no: 'INV-2026-008', projIdx: 3, vendor: 'Migrator Pro Sdn Bhd', amount: 42000, invDate: daysAgo(10), dueDate: daysAhead(20), status: 'menunggu_kelulusan', attachment: '/invoices/inv-008.pdf', attName: 'INV-2026-008-Migrator.pdf', remarks: 'Penghantaran dokumen lengkap', createdByIdx: 4 },
+   368→    { no: 'INV-2026-009', projIdx: 4, vendor: 'CyberSafe Training', amount: 25000, invDate: daysAgo(60), dueDate: daysAgo(30), status: 'dibayar', attachment: '/invoices/inv-009.pdf', attName: 'INV-2026-009-CyberSafe.pdf', approvedByIdx: 1, remarks: 'Bayaran penuh - projek selesai', createdByIdx: 3 },
+   369→    { no: 'INV-2026-010', projIdx: 4, vendor: 'LearnHub Asia', amount: 12000, invDate: daysAgo(50), dueDate: daysAgo(20), status: 'ditolak', attachment: '/invoices/inv-010.pdf', attName: 'INV-2026-010-LearnHub.pdf', approvedByIdx: 1, remarks: 'Ditolak - dokumentasi tidak lengkap. Sila hantar semula dengan kontrak ditandatangani.', createdByIdx: 4 },
+   370→    { no: 'INV-2026-011', projIdx: 5, vendor: 'MobileFirst Sdn Bhd', amount: 85000, invDate: daysAgo(3), dueDate: daysAhead(27), status: 'draf', createdByIdx: 3 },
+   371→    { no: 'INV-2026-012', projIdx: 5, vendor: 'UIUX Studio Asia', amount: 35000, invDate: daysAgo(2), dueDate: daysAhead(28), status: 'draf', createdByIdx: 4 },
+   372→    { no: 'INV-2026-013', projIdx: 0, vendor: 'TechSoft Solutions Sdn Bhd', vemail: 'finance@techsoft.com.my', amount: 52000, invDate: daysAgo(1), dueDate: daysAhead(29), status: 'menunggu_kelulusan', attachment: '/invoices/inv-013.pdf', attName: 'INV-2026-013-TechSoft.pdf', remarks: 'Pembayaran fasa akhir', createdByIdx: 3 },
+   373→    { no: 'INV-2026-014', projIdx: 1, vendor: 'InfraBuild Sdn Bhd', amount: 95000, invDate: daysAgo(40), dueDate: daysAgo(10), status: 'tertunggak', attachment: '/invoices/inv-014.pdf', attName: 'INV-2026-014-InfraBuild.pdf', approvedByIdx: 2, remarks: 'Diluluskan - tertunggak bayaran', createdByIdx: 3 },
+   374→    { no: 'INV-2026-015', projIdx: 2, vendor: 'MarketPro Agency', amount: 22000, invDate: daysAgo(35), dueDate: daysAhead(5), status: 'dibayar', attachment: '/invoices/inv-015.pdf', attName: 'INV-2026-015-MarketPro.pdf', approvedByIdx: 1, remarks: 'Bayaran selesai', createdByIdx: 4 },
+   375→  ]
+   376→
+   377→  for (const inv of invoicesData) {
+   378→    const approvedBy = inv.approvedByIdx !== undefined ? users[inv.approvedByIdx].id : null
+   379→    const approvedAt = approvedBy ? (inv.status === 'diluluskan' || inv.status === 'dibayar' || inv.status === 'tertunggak' || inv.status === 'ditolak' ? daysAgo(Math.floor(Math.random() * 10) + 1) : null) : null
+   380→    const paidAt = inv.status === 'dibayar' ? daysAgo(Math.floor(Math.random() * 5)) : null
+   381→
+   382→    const created = await db.invoice.create({
+   383→      data: {
+   384→        invoiceNo: inv.no,
+   385→        projectId: projects[inv.projIdx].id,
+   386→        vendorName: inv.vendor,
+   387→        vendorEmail: inv.vemail,
+   388→        amount: inv.amount,
+   389→        invoiceDate: inv.invDate,
+   390→        dueDate: inv.dueDate,
+   391→        status: inv.status,
+   392→        attachmentUrl: inv.attachment || null,
+   393→        attachmentName: inv.attName || null,
+   394→        approvedById: approvedBy,
+   395→        approvedAt: approvedAt,
+   396→        paidAt: paidAt,
+   397→        remarks: inv.remarks,
+   398→        createdById: users[inv.createdByIdx].id,
+   399→      }
+   400→    })
+   401→
+   402→    // History records
+   403→    await db.invoiceHistory.create({ data: { invoiceId: created.id, action: 'created', toStatus: 'draf', userId: users[inv.createdByIdx].id, createdAt: inv.invDate } })
+   404→    if (inv.status !== 'draf') {
+   405→      await db.invoiceHistory.create({ data: { invoiceId: created.id, action: 'status_changed', fromStatus: 'draf', toStatus: 'menunggu_kelulusan', userId: users[inv.createdByIdx].id, createdAt: new Date(inv.invDate.getTime() + 86400000) } })
+   406→    }
+   407→    if (approvedBy && (inv.status === 'diluluskan' || inv.status === 'dibayar' || inv.status === 'tertunggak')) {
+   408→      await db.invoiceHistory.create({ data: { invoiceId: created.id, action: 'approved', fromStatus: 'menunggu_kelulusan', toStatus: 'diluluskan', userId: approvedBy, remarks: inv.remarks, createdAt: approvedAt! } })
+   409→    }
+   410→    if (inv.status === 'ditolak' && approvedBy) {
+   411→      await db.invoiceHistory.create({ data: { invoiceId: created.id, action: 'rejected', fromStatus: 'menunggu_kelulusan', toStatus: 'ditolak', userId: approvedBy, remarks: inv.remarks, createdAt: approvedAt! } })
+   412→    }
+   413→    if (inv.status === 'dibayar') {
+   414→      await db.invoiceHistory.create({ data: { invoiceId: created.id, action: 'paid', fromStatus: 'diluluskan', toStatus: 'dibayar', userId: users[inv.createdByIdx].id, remarks: 'Pembayaran berjaya dilakukan', createdAt: paidAt! } })
+   415→    }
+   416→    if (inv.status === 'tertunggak') {
+   417→      await db.invoiceHistory.create({ data: { invoiceId: created.id, action: 'status_changed', fromStatus: 'diluluskan', toStatus: 'tertunggak', userId: approvedBy, remarks: 'Invois tertunggak - melebihi tarikh matang', createdAt: new Date() } })
+   418→    }
+   419→  }
+   420→  console.log(`✓ Created ${invoicesData.length} invoices with history`)
+   421→
+   422→  // ============================
+   423→  // NOTIFICATIONS
+   424→  // ============================
+   425→  const notifData = [
+   426→    { userIdx: 1, title: 'Invois Tertunggak Memerlukan Tindakan', message: 'INV-2026-003 daripada GlobalTech Systems Sdn Bhd telah melebihi tarikh matang. Sila uruskan bayaran.', type: 'error', category: 'invoice', link: 'invoices' },
+   427→    { userIdx: 1, title: 'Invois Baharu Menunggu Kelulusan', message: 'INV-2026-013 sebanyak RM 52,000 menunggu kelulusan anda.', type: 'warning', category: 'invoice', link: 'invoices' },
+   428→    { userIdx: 2, title: '2 Invois Menunggu Kelulusan', message: 'Anda mempunyai 2 invois menunggu semakan: INV-2026-004 dan INV-2026-008.', type: 'warning', category: 'invoice', link: 'invoices' },
+   429→    { userIdx: 2, title: 'Invois Besar Memerlukan Perhatian', message: 'INV-2026-006 sebanyak RM 280,000 memerlukan kelulusan PM dan Kewangan.', type: 'warning', category: 'invoice', link: 'invoices' },
+   430→    { userIdx: 5, title: 'Selamat Datang ke LMS PERKESO', message: 'Anda telah didaftarkan ke 3 kursus latihan. Sila mula pembelajaran anda.', type: 'info', category: 'course', link: 'my-learning' },
+   431→    { userIdx: 5, title: 'Sijil Diterima', message: 'Tahniah! Anda telah menamatkan kursus "Asas Pengurusan Projek (PMBOK 7)". Sijil sedia untuk dimuat turun.', type: 'success', category: 'course', link: 'my-learning' },
+   432→    { userIdx: 6, title: 'Kursus Baharu Tersedia', message: 'Kursus "Pengurusan Invois & Kawalan Kewangan Projek" kini tersedia untuk pendaftaran.', type: 'info', category: 'course', link: 'courses' },
+   433→    { userIdx: 7, title: 'Sijil Diterima', message: 'Tahniah! Anda telah menamatkan kursus Pengurusan Invois.', type: 'success', category: 'course', link: 'my-learning' },
+   434→    { userIdx: 8, title: 'Selamat Datang ke LMS PERKESO', message: 'Anda telah didaftarkan ke 3 kursus. Mulakan pembelajaran anda sekarang.', type: 'info', category: 'course', link: 'my-learning' },
+   435→    { userIdx: 9, title: 'Laporan Kewangan Bulanan Sedia', message: 'Laporan ringkasan kewangan projek untuk Julai 2026 sedia untuk semakan.', type: 'info', category: 'system', link: 'reports' },
+   436→  ]
+   437→  for (const n of notifData) {
+   438→    await db.notification.create({
+   439→      data: {
+   440→        userId: users[n.userIdx].id,
+   441→        title: n.title,
+   442→        message: n.message,
+   443→        type: n.type,
+   444→        category: n.category,
+   445→        link: n.link,
+   446→        isRead: Math.random() > 0.5,
+   447→        createdAt: new Date(Date.now() - Math.random() * 5 * 86400000),
+   448→      }
+   449→    })
+   450→  }
+   451→  console.log(`✓ Created ${notifData.length} notifications`)
+   452→
+   453→  console.log('\n🎉 Seed completed successfully!')
+   454→  console.log('\n📋 Login credentials (email / password):')
+   455→  console.log('  Admin Sistem     : admin@perkeso.gov.my / admin123')
+   456→  console.log('  Pengurus Projek  : pm@perkeso.gov.my / pm123')
+   457→  console.log('  Admin Projek     : padmin@perkeso.gov.my / padmin123')
+   458→  console.log('  Peserta Latihan  : staff1@perkeso.gov.my / staff123')
+   459→  console.log('  Pengurusan Atasan: upper@perkeso.gov.my / upper123')
+   460→}
+   461→
+   462→main()
+   463→  .catch((e) => {
+   464→    console.error('❌ Seed failed:', e)
+   465→    process.exit(1)
+   466→  })
+   467→  .finally(async () => {
+   468→    await db.$disconnect()
+   469→  })
+   470→
