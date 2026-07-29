@@ -494,3 +494,40 @@ User needs to:
 2. Run supabase-setup.sql in Supabase SQL Editor (creates tables + seed data)
 3. bun install && bun run db:generate && bun run dev
 4. If IPv6 unavailable, switch .env to pooler URL or create .env.local with SQLite
+
+---
+Task ID: 8
+Agent: main-orchestrator
+Task: Prepare and deploy latest update to Vercel
+
+Work Log:
+- Installed Vercel CLI (v58.1.0) globally via npm
+- Switched schema.prisma back to provider = "postgresql" (production)
+- Regenerated Prisma client for PostgreSQL
+- Verified local build succeeds (bun run build → .next/standalone/server.js, 38 API routes compiled)
+- Created vercel.json:
+  - framework: nextjs
+  - buildCommand: "prisma generate && next build" (ensures Prisma client generated during Vercel build)
+  - installCommand: "bun install"
+  - build env vars: DATABASE_URL, SUPABASE_URL, SUPABASE_PROJECT_REF, SUPABASE_PUBLISHABLE_KEY
+- Created deploy-vercel.sh:
+  - Supports interactive login OR token-based auth
+  - Auto-sets env vars from .env (DATABASE_URL, SUPABASE_*)
+  - Deploys to production with --prod flag
+- Committed vercel.json + deploy-vercel.sh to GitHub (commit c1d717c)
+- Attempted Vercel deploy in sandbox — failed (no Vercel token available)
+- Switched sandbox back to SQLite for local preview (regenerated client)
+- Verified sandbox preview works (login API returns 200)
+- Restored dev server on port 3000
+
+Stage Summary:
+- ✅ Vercel deployment fully configured (vercel.json + deploy-vercel.sh)
+- ✅ Build verified successful locally (38 API routes compile)
+- ✅ All files pushed to GitHub (commit c1d717c)
+- ❌ Sandbox cannot deploy to Vercel directly (needs user's Vercel token)
+- ✅ Sandbox preview running on port 3000 (SQLite override via .env.local)
+
+User needs to deploy from their own machine:
+  1. Pull latest: git pull origin main
+  2. Run: ./deploy-vercel.sh  (or ./deploy-vercel.sh <VERCEL_TOKEN>)
+  3. Or: Connect GitHub repo to Vercel dashboard for auto-deploy
