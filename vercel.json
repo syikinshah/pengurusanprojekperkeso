@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "prisma generate && next build",
+  "installCommand": "bun install",
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "build": {
+    "env": [
+      "DATABASE_URL",
+      "SUPABASE_URL",
+      "SUPABASE_PROJECT_REF",
+      "SUPABASE_PUBLISHABLE_KEY"
+    ]
+  }
+}
