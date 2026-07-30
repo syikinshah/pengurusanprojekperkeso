@@ -1,0 +1,376 @@
+     1→-- ================================================================
+     2→-- LMS-ITS PERKESO — Complete Database Setup for Supabase
+     3→-- Sistem Pengurusan Pembelajaran & Penjejakan Invois
+     4→-- Unit Pengurusan Projek (PMU), PERKESO
+     5→--
+     6→-- CARA GUNA:
+     7→--   1. Buka Supabase Dashboard → SQL Editor
+     8→--   2. Salin dan tampal seluruh skrip ini
+     9→--   3. Klik 'Run' untuk cipta skema + data dummy
+    10→-- ================================================================
+    11→
+    12→-- ===== BAHAGIAN 1: SKEMA (DDL) — 12 tables =====
+    13→
+    14→-- CreateTable
+    15→CREATE TABLE "User" (
+    16→    "id" TEXT NOT NULL PRIMARY KEY,
+    17→    "email" TEXT NOT NULL,
+    18→    "password" TEXT NOT NULL,
+    19→    "name" TEXT NOT NULL,
+    20→    "role" TEXT NOT NULL DEFAULT 'trainee',
+    21→    "department" TEXT NOT NULL DEFAULT 'PMU',
+    22→    "position" TEXT,
+    23→    "phone" TEXT,
+    24→    "avatarUrl" TEXT,
+    25→    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    26→    "lastLoginAt" DATETIME,
+    27→    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    28→    "updatedAt" DATETIME NOT NULL
+    29→);
+    30→
+    31→-- CreateTable
+    32→CREATE TABLE "Course" (
+    33→    "id" TEXT NOT NULL PRIMARY KEY,
+    34→    "title" TEXT NOT NULL,
+    35→    "description" TEXT NOT NULL,
+    36→    "category" TEXT NOT NULL DEFAULT 'Umum',
+    37→    "level" TEXT NOT NULL DEFAULT 'Pertengahan',
+    38→    "duration" REAL NOT NULL DEFAULT 0,
+    39→    "instructor" TEXT,
+    40→    "thumbnailUrl" TEXT,
+    41→    "status" TEXT NOT NULL DEFAULT 'aktif',
+    42→    "createdBy" TEXT NOT NULL,
+    43→    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    44→    "updatedAt" DATETIME NOT NULL,
+    45→    CONSTRAINT "Course_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    46→);
+    47→
+    48→-- CreateTable
+    49→CREATE TABLE "Material" (
+    50→    "id" TEXT NOT NULL PRIMARY KEY,
+    51→    "courseId" TEXT NOT NULL,
+    52→    "title" TEXT NOT NULL,
+    53→    "type" TEXT NOT NULL DEFAULT 'pdf',
+    54→    "url" TEXT NOT NULL,
+    55→    "description" TEXT,
+    56→    "duration" REAL,
+    57→    "order" INTEGER NOT NULL DEFAULT 0,
+    58→    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    59→    CONSTRAINT "Material_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Course" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    60→);
+    61→
+    62→-- CreateTable
+    63→CREATE TABLE "Enrollment" (
+    64→    "id" TEXT NOT NULL PRIMARY KEY,
+    65→    "userId" TEXT NOT NULL,
+    66→    "courseId" TEXT NOT NULL,
+    67→    "progress" REAL NOT NULL DEFAULT 0,
+    68→    "status" TEXT NOT NULL DEFAULT 'belum_mula',
+    69→    "enrolledAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    70→    "completedAt" DATETIME,
+    71→    "certificateUrl" TEXT,
+    72→    "lastAccessedAt" DATETIME,
+    73→    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    74→    "updatedAt" DATETIME NOT NULL,
+    75→    CONSTRAINT "Enrollment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    76→    CONSTRAINT "Enrollment_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Course" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    77→);
+    78→
+    79→-- CreateTable
+    80→CREATE TABLE "Quiz" (
+    81→    "id" TEXT NOT NULL PRIMARY KEY,
+    82→    "courseId" TEXT NOT NULL,
+    83→    "title" TEXT NOT NULL,
+    84→    "description" TEXT,
+    85→    "passScore" REAL NOT NULL DEFAULT 60,
+    86→    "duration" INTEGER NOT NULL DEFAULT 15,
+    87→    "order" INTEGER NOT NULL DEFAULT 0,
+    88→    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    89→    CONSTRAINT "Quiz_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Course" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    90→);
+    91→
+    92→-- CreateTable
+    93→CREATE TABLE "Question" (
+    94→    "id" TEXT NOT NULL PRIMARY KEY,
+    95→    "quizId" TEXT NOT NULL,
+    96→    "text" TEXT NOT NULL,
+    97→    "type" TEXT NOT NULL DEFAULT 'single',
+    98→    "options" TEXT NOT NULL,
+    99→    "answer" TEXT NOT NULL,
+   100→    "points" INTEGER NOT NULL DEFAULT 1,
+   101→    "order" INTEGER NOT NULL DEFAULT 0,
+   102→    CONSTRAINT "Question_quizId_fkey" FOREIGN KEY ("quizId") REFERENCES "Quiz" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+   103→);
+   104→
+   105→-- CreateTable
+   106→CREATE TABLE "QuizAttempt" (
+   107→    "id" TEXT NOT NULL PRIMARY KEY,
+   108→    "quizId" TEXT NOT NULL,
+   109→    "userId" TEXT NOT NULL,
+   110→    "score" REAL NOT NULL DEFAULT 0,
+   111→    "totalPoints" INTEGER NOT NULL DEFAULT 0,
+   112→    "earnedPoints" INTEGER NOT NULL DEFAULT 0,
+   113→    "passed" BOOLEAN NOT NULL DEFAULT false,
+   114→    "answers" TEXT NOT NULL,
+   115→    "startedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   116→    "completedAt" DATETIME,
+   117→    CONSTRAINT "QuizAttempt_quizId_fkey" FOREIGN KEY ("quizId") REFERENCES "Quiz" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+   118→    CONSTRAINT "QuizAttempt_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+   119→);
+   120→
+   121→-- CreateTable
+   122→CREATE TABLE "Project" (
+   123→    "id" TEXT NOT NULL PRIMARY KEY,
+   124→    "projectName" TEXT NOT NULL,
+   125→    "description" TEXT,
+   126→    "budget" REAL NOT NULL DEFAULT 0,
+   127→    "projectManagerId" TEXT,
+   128→    "status" TEXT NOT NULL DEFAULT 'aktif',
+   129→    "startDate" DATETIME,
+   130→    "endDate" DATETIME,
+   131→    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   132→    "updatedAt" DATETIME NOT NULL,
+   133→    CONSTRAINT "Project_projectManagerId_fkey" FOREIGN KEY ("projectManagerId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+   134→);
+   135→
+   136→-- CreateTable
+   137→CREATE TABLE "Invoice" (
+   138→    "id" TEXT NOT NULL PRIMARY KEY,
+   139→    "invoiceNo" TEXT NOT NULL,
+   140→    "projectId" TEXT NOT NULL,
+   141→    "vendorName" TEXT NOT NULL,
+   142→    "vendorEmail" TEXT,
+   143→    "amount" REAL NOT NULL,
+   144→    "invoiceDate" DATETIME NOT NULL,
+   145→    "dueDate" DATETIME NOT NULL,
+   146→    "status" TEXT NOT NULL DEFAULT 'draf',
+   147→    "attachmentUrl" TEXT,
+   148→    "attachmentName" TEXT,
+   149→    "approvedById" TEXT,
+   150→    "approvedAt" DATETIME,
+   151→    "paidAt" DATETIME,
+   152→    "remarks" TEXT,
+   153→    "createdById" TEXT,
+   154→    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   155→    "updatedAt" DATETIME NOT NULL,
+   156→    CONSTRAINT "Invoice_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+   157→    CONSTRAINT "Invoice_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+   158→    CONSTRAINT "Invoice_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+   159→);
+   160→
+   161→-- CreateTable
+   162→CREATE TABLE "InvoiceHistory" (
+   163→    "id" TEXT NOT NULL PRIMARY KEY,
+   164→    "invoiceId" TEXT NOT NULL,
+   165→    "action" TEXT NOT NULL,
+   166→    "fromStatus" TEXT,
+   167→    "toStatus" TEXT,
+   168→    "remarks" TEXT,
+   169→    "userId" TEXT,
+   170→    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   171→    CONSTRAINT "InvoiceHistory_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+   172→    CONSTRAINT "InvoiceHistory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+   173→);
+   174→
+   175→-- CreateTable
+   176→CREATE TABLE "Notification" (
+   177→    "id" TEXT NOT NULL PRIMARY KEY,
+   178→    "userId" TEXT NOT NULL,
+   179→    "title" TEXT NOT NULL,
+   180→    "message" TEXT NOT NULL,
+   181→    "type" TEXT NOT NULL DEFAULT 'info',
+   182→    "category" TEXT NOT NULL DEFAULT 'invoice',
+   183→    "isRead" BOOLEAN NOT NULL DEFAULT false,
+   184→    "link" TEXT,
+   185→    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   186→    CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+   187→);
+   188→
+   189→-- CreateIndex
+   190→CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+   191→
+   192→-- CreateIndex
+   193→CREATE UNIQUE INDEX "Enrollment_userId_courseId_key" ON "Enrollment"("userId", "courseId");
+   194→
+   195→-- CreateIndex
+   196→CREATE UNIQUE INDEX "Invoice_invoiceNo_key" ON "Invoice"("invoiceNo");
+   197→
+   198→
+   199→-- ===== BAHAGIAN 2: DATA DUMMY (DML) =====
+   200→
+   201→-- Seed data for LMS-ITS PERKESO (Supabase PostgreSQL)
+   202→-- Auto-generated from SQLite dummy database
+   203→-- Timestamps converted from epoch ms to PostgreSQL TIMESTAMP
+   204→
+   205→-- Temporarily disable FK constraints for clean insertion order
+   206→SET session_replication_role = 'replica';
+   207→
+   208→-- User (10 records)
+   209→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon50000ve307s6otuoq', 'pm@perkeso.gov.my', 'hash_pm123', 'Mohd Faizal bin Hassan', 'project_manager', 'PMU', 'Pengurus Projek Senior', '+603-4264-5556', NULL, true, NULL, to_timestamp(1785372493505 / 1000.0), to_timestamp(1785372493505 / 1000.0));
+   210→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon70001ve30mj4c5lyg', 'pm2@perkeso.gov.my', 'hash_pm123', 'Siti Nurhaliza binti Abdullah', 'project_manager', 'PMU', 'Pengurus Projek', '+603-4264-5557', NULL, true, NULL, to_timestamp(1785372493507 / 1000.0), to_timestamp(1785372493507 / 1000.0));
+   211→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon70002ve30ljyrhky8', 'padmin@perkeso.gov.my', 'hash_padmin123', 'Tan Wei Ming', 'project_admin', 'PMU', 'Pentadbir Projek', '+603-4264-5558', NULL, true, NULL, to_timestamp(1785372493507 / 1000.0), to_timestamp(1785372493507 / 1000.0));
+   212→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon70003ve30o205ihrd', 'padmin2@perkeso.gov.my', 'hash_padmin123', 'Lim Mei Ling', 'project_admin', 'PMU', 'Pentadbir Projek', '+603-4264-5559', NULL, true, NULL, to_timestamp(1785372493508 / 1000.0), to_timestamp(1785372493508 / 1000.0));
+   213→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon70004ve30tq52c4ky', 'staff1@perkeso.gov.my', 'hash_staff123', 'Nurul Aini binti Yusof', 'trainee', 'PMU', 'Pegawai Latihan', '+603-4264-5560', NULL, true, NULL, to_timestamp(1785372493508 / 1000.0), to_timestamp(1785372493508 / 1000.0));
+   214→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon80005ve30urufm8g4', 'staff2@perkeso.gov.my', 'hash_staff123', 'Ahmad Zulkifli bin Ibrahim', 'trainee', 'PMU', 'Pegawai Operasi', '+603-4264-5561', NULL, true, NULL, to_timestamp(1785372493508 / 1000.0), to_timestamp(1785372493508 / 1000.0));
+   215→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon80006ve30gznhgpgx', 'upper@perkeso.gov.my', 'hash_upper123', 'Dato'' Ramli bin Saad', 'upper_management', 'PMU', 'Pengurus Atasan', '+603-4264-5500', NULL, true, NULL, to_timestamp(1785372493508 / 1000.0), to_timestamp(1785372493508 / 1000.0));
+   216→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon80007ve300794ma5t', 'staff3@perkeso.gov.my', 'hash_staff123', 'Kavitha a/p Raju', 'trainee', 'PMU', 'Pegawai Kewangan', '+603-4264-5562', NULL, true, NULL, to_timestamp(1785372493509 / 1000.0), to_timestamp(1785372493509 / 1000.0));
+   217→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon80008ve30t5qu0ycf', 'staff4@perkeso.gov.my', 'hash_staff123', 'Roziana binti Othman', 'trainee', 'PMU', 'Pegawai Pentadbiran', '+603-4264-5563', NULL, true, NULL, to_timestamp(1785372493509 / 1000.0), to_timestamp(1785372493509 / 1000.0));
+   218→INSERT INTO "User" ("id", "email", "password", "name", "role", "department", "position", "phone", "avatarUrl", "isActive", "lastLoginAt", "createdAt", "updatedAt") VALUES ('cms6soon90009ve303ubqp73w', 'admin@perkeso.gov.my', 'hash_admin123', 'Aisyah binti Rahman', 'admin', 'PMU', 'Pentadbir Sistem', '+603-4264-5555', NULL, true, NULL, to_timestamp(1785372493510 / 1000.0), to_timestamp(1785372493510 / 1000.0));
+   219→
+   220→-- Course (7 records)
+   221→INSERT INTO "Course" ("id", "title", "description", "category", "level", "duration", "instructor", "thumbnailUrl", "status", "createdBy", "createdAt", "updatedAt") VALUES ('cms6soonb000bve30hxe6gamv', 'Microsoft Power BI untuk Pelaporan Projek', 'Membina dashboard interaktif dan laporan visual menggunakan Power BI untuk pemantauan prestasi dan kewangan projek.', 'Teknologi', 'Lanjutan', 14, 'Lim Mei Ling', NULL, 'aktif', 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493511 / 1000.0), to_timestamp(1785372493511 / 1000.0));
+   222→INSERT INTO "Course" ("id", "title", "description", "category", "level", "duration", "instructor", "thumbnailUrl", "status", "createdBy", "createdAt", "updatedAt") VALUES ('cms6soonc000dve303wc4vhok', 'Procurement & Kontrak Vendor PERKESO', 'Proses perolehan, pengurusan kontrak vendor, penilaian prestasi vendor dan pematuhan polisi perbendaharaan.', 'Pengurusan', 'Lanjutan', 11, 'Mohd Faizal bin Hassan', NULL, 'draf', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493512 / 1000.0), to_timestamp(1785372493512 / 1000.0));
+   223→INSERT INTO "Course" ("id", "title", "description", "category", "level", "duration", "instructor", "thumbnailUrl", "status", "createdBy", "createdAt", "updatedAt") VALUES ('cms6soonc000fve30f05qk7x7', 'Komunikasi Berkesan & Pengurusan Pasukan', 'Kemahiran komunikasi profesional, pengurusan konflik dalam pasukan, dan kepimpinan kolaboratif untuk pengurus projek.', 'Pengurusan', 'Pertengahan', 9, 'Siti Nurhaliza binti Abdullah', NULL, 'aktif', 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493513 / 1000.0), to_timestamp(1785372493513 / 1000.0));
+   224→INSERT INTO "Course" ("id", "title", "description", "category", "level", "duration", "instructor", "thumbnailUrl", "status", "createdBy", "createdAt", "updatedAt") VALUES ('cms6soond000hve30eftrszxb', 'Pengurusan Invois & Kawalan Kewangan Projek', 'Kursus pengurusan kewangan projek, penjejakan invois, kawalan bajet dan pelaporan kewangan mengikut garis panduan perbendaharaan.', 'Kewangan', 'Pertengahan', 10, 'Lim Mei Ling', NULL, 'aktif', 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493513 / 1000.0), to_timestamp(1785372493513 / 1000.0));
+   225→INSERT INTO "Course" ("id", "title", "description", "category", "level", "duration", "instructor", "thumbnailUrl", "status", "createdBy", "createdAt", "updatedAt") VALUES ('cms6soond000jve30yzaqgezk', 'Agile & Scrum Methodology', 'Pengenalan kepada metodologi Agile dan rangka kerja Scrum untuk pengurusan projek software. Termasuk peranan Scrum Master, Product Owner dan acara-acara Scrum.', 'Teknikal', 'Pertengahan', 8, 'Tan Wei Ming', NULL, 'aktif', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493514 / 1000.0), to_timestamp(1785372493514 / 1000.0));
+   226→INSERT INTO "Course" ("id", "title", "description", "category", "level", "duration", "instructor", "thumbnailUrl", "status", "createdBy", "createdAt", "updatedAt") VALUES ('cms6soone000lve309uwjgqn0', 'Keselamatan Siber & Perlindungan Data', 'Kesedaran keselamatan siber, perlindungan data peribadi (PDPA), dan amalan terbaik keselamatan maklumat untuk kakitangan.', 'Teknologi', 'Asas', 6, 'Tan Wei Ming', NULL, 'aktif', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493514 / 1000.0), to_timestamp(1785372493514 / 1000.0));
+   227→INSERT INTO "Course" ("id", "title", "description", "category", "level", "duration", "instructor", "thumbnailUrl", "status", "createdBy", "createdAt", "updatedAt") VALUES ('cms6soonf000nve30j2u39al0', 'Asas Pengurusan Projek (PMBOK 7)', 'Kursus asas pengurusan projek mengikut rangka kerja PMBOK edisi ke-7. Merangkumi 5 kumpulan proses dan 10 kawasan pengetahuan.', 'Pengurusan', 'Asas', 12, 'Mohd Faizal bin Hassan', NULL, 'aktif', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493516 / 1000.0), to_timestamp(1785372493516 / 1000.0));
+   228→
+   229→-- Material (18 records)
+   230→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonh000pve30a306dtxo', 'cms6soonf000nve30j2u39al0', 'Pengenalan PMBOK 7 - Sistem Penyampaian Nilai', 'pdf', '/materials/pmbok7-intro.pdf', NULL, 45, 1, to_timestamp(1785372493517 / 1000.0));
+   231→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6sooni000rve30v7qmgn37', 'cms6soonf000nve30j2u39al0', 'Video: 12 Prinsip Pengurusan Projek', 'video', '/materials/pmbok-principles.mp4', NULL, 30, 2, to_timestamp(1785372493518 / 1000.0));
+   232→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6sooni000tve30wqubtdcf', 'cms6soonf000nve30j2u39al0', 'Slaid: Kumpulan Proses & Kawasan Pengetahuan', 'slide', '/materials/pmbok-processes.pdf', NULL, 60, 3, to_timestamp(1785372493519 / 1000.0));
+   233→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonj000vve30xvdtyraf', 'cms6soonf000nve30j2u39al0', 'Dokumen: Templat Rancangan Projek (Project Charter)', 'document', '/materials/project-charter-template.docx', NULL, 20, 4, to_timestamp(1785372493520 / 1000.0));
+   234→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonk000xve30phcipieb', 'cms6soond000jve30yzaqgezk', 'Pengenalan Agile Manifesto', 'pdf', '/materials/agile-manifesto.pdf', NULL, 25, 1, to_timestamp(1785372493520 / 1000.0));
+   235→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonl000zve30stoi3hl2', 'cms6soond000jve30yzaqgezk', 'Video: Scrum Framework Overview', 'video', '/materials/scrum-overview.mp4', NULL, 40, 2, to_timestamp(1785372493521 / 1000.0));
+   236→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonm0011ve30iep6h868', 'cms6soond000jve30yzaqgezk', 'Slaid: Acara-acara Scrum', 'slide', '/materials/scrum-events.pdf', NULL, 35, 3, to_timestamp(1785372493523 / 1000.0));
+   237→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonn0013ve30snn45e6j', 'cms6soond000hve30eftrszxb', 'Garis Panduan Pengurusan Invois PERKESO', 'pdf', '/materials/invoice-guidelines.pdf', NULL, 50, 1, to_timestamp(1785372493523 / 1000.0));
+   238→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soono0015ve30yoxm30mn', 'cms6soond000hve30eftrszxb', 'Video: Aliran Kelulusan Invois', 'video', '/materials/invoice-approval-flow.mp4', NULL, 25, 2, to_timestamp(1785372493524 / 1000.0));
+   239→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonp0017ve30g8tjcaup', 'cms6soond000hve30eftrszxb', 'Slaid: Kawalan Bajet Projek', 'slide', '/materials/budget-control.pdf', NULL, 45, 3, to_timestamp(1785372493526 / 1000.0));
+   240→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonq0019ve30rqrwxglc', 'cms6soone000lve309uwjgqn0', 'Pengenalan PDPA & Perlindungan Data', 'pdf', '/materials/pdpa-intro.pdf', NULL, 30, 1, to_timestamp(1785372493526 / 1000.0));
+   241→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonq001bve308013cc4m', 'cms6soone000lve309uwjgqn0', 'Video: Phishing & Ancaman Siber', 'video', '/materials/phishing-threats.mp4', NULL, 20, 2, to_timestamp(1785372493527 / 1000.0));
+   242→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonr001dve307pe5rt43', 'cms6soonb000bve30hxe6gamv', 'Pemasangan & Persediaan Power BI Desktop', 'pdf', '/materials/powerbi-setup.pdf', NULL, 40, 1, to_timestamp(1785372493527 / 1000.0));
+   243→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonr001fve30w2eodx6u', 'cms6soonb000bve30hxe6gamv', 'Video: Membina Visual Asas', 'video', '/materials/powerbi-visuals.mp4', NULL, 55, 2, to_timestamp(1785372493528 / 1000.0));
+   244→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soons001hve30oc4kupdu', 'cms6soonb000bve30hxe6gamv', 'Slaid: DAX Functions Asas', 'slide', '/materials/dax-basics.pdf', NULL, 60, 3, to_timestamp(1785372493529 / 1000.0));
+   245→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soont001jve30h2nt370b', 'cms6soonc000fve30f05qk7x7', 'Prinsip Komunikasi Berkesan', 'pdf', '/materials/communication-principles.pdf', NULL, 35, 1, to_timestamp(1785372493529 / 1000.0));
+   246→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonu001lve30y5q3hz72', 'cms6soonc000fve30f05qk7x7', 'Video: Pengurusan Konflik', 'video', '/materials/conflict-management.mp4', NULL, 30, 2, to_timestamp(1785372493530 / 1000.0));
+   247→INSERT INTO "Material" ("id", "courseId", "title", "type", "url", "description", "duration", "order", "createdAt") VALUES ('cms6soonu001nve30fdgj6hso', 'cms6soonc000dve303wc4vhok', 'Proses Perolehan PERKESO', 'pdf', '/materials/procurement-process.pdf', NULL, 60, 1, to_timestamp(1785372493531 / 1000.0));
+   248→
+   249→-- Quiz (3 records)
+   250→INSERT INTO "Quiz" ("id", "courseId", "title", "description", "passScore", "duration", "order", "createdAt") VALUES ('cms6soonw001pve30smy4fba6', 'cms6soonf000nve30j2u39al0', 'Penilaian Asas PMBOK 7', 'Ujian kefahaman konsep asas PMBOK 7 edisi.', 70, 20, 1, to_timestamp(1785372493532 / 1000.0));
+   251→INSERT INTO "Quiz" ("id", "courseId", "title", "description", "passScore", "duration", "order", "createdAt") VALUES ('cms6sooo10021ve30nrk06jak', 'cms6soond000jve30yzaqgezk', 'Penilaian Agile & Scrum', 'Ujian kefahaman metodologi Agile dan Scrum.', 60, 15, 1, to_timestamp(1785372493537 / 1000.0));
+   252→INSERT INTO "Quiz" ("id", "courseId", "title", "description", "passScore", "duration", "order", "createdAt") VALUES ('cms6sooo4002bve30gm5iml5c', 'cms6soond000hve30eftrszxb', 'Penilaian Pengurusan Invois', 'Ujian kefahaman aliran kelulusan invois dan kawalan kewangan.', 65, 18, 1, to_timestamp(1785372493541 / 1000.0));
+   253→
+   254→-- Question (13 records)
+   255→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6soonw001rve30tgt2b5h4', 'cms6soonw001pve30smy4fba6', 'Berapakah kumpulan proses (process groups) dalam PMBOK 7?', 'single', '["3","5","7","10"]', '[1]', 2, 1);
+   256→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6soonx001tve302bkmrg1h', 'cms6soonw001pve30smy4fba6', 'Yang manakah kawasan pengetahuan (knowledge area) dalam PMBOK?', 'multiple', '["Pengurusan Skop","Pengurusan Masa","Pengurusan Pasukan","Semua di atas"]', '[3]', 2, 2);
+   257→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6soony001vve30yfateh1w', 'cms6soonw001pve30smy4fba6', 'Project Charter adalah dokumen yang diluluskan oleh penaja projek.', 'true_false', '["Benar","False"]', '[0]', 1, 3);
+   258→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6soonz001xve30v1r8sved', 'cms6soonw001pve30smy4fba6', 'Manakah yang BUKAN merupakan prinsip PMBOK 7?', 'single', '["Kepimpinan Berbelas kasihan","Pemikiran Sistem","Pengurusan Hierarki","Menyesuaikan dengan kompleksiti"]', '[2]', 2, 4);
+   259→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6sooo0001zve305yctyk54', 'cms6soonw001pve30smy4fba6', 'Risk Management adalah sebahagian daripada kawasan pengetahuan PMBOK.', 'true_false', '["Benar","False"]', '[0]', 1, 5);
+   260→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6sooo10023ve30wn6gsjct', 'cms6sooo10021ve30nrk06jak', 'Apakah tempoh standard Sprint dalam Scrum?', 'single', '["1 minggu","2-4 minggu","1 bulan","3 bulan"]', '[1]', 2, 1);
+   261→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6sooo20025ve30yv6vourp', 'cms6sooo10021ve30nrk06jak', 'Yang manakah peranan utama dalam Scrum?', 'multiple', '["Scrum Master","Product Owner","Project Sponsor","Developer"]', '[0,1,3]', 3, 2);
+   262→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6sooo30027ve30dehrwsn0', 'cms6sooo10021ve30nrk06jak', 'Daily Standup adalah mesyuarat formal berdurasi 1 jam.', 'true_false', '["Benar","False"]', '[1]', 1, 3);
+   263→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6sooo40029ve302gigct50', 'cms6sooo10021ve30nrk06jak', 'Apakah output utama Sprint Planning?', 'single', '["Sprint Backlog","Product Backlog","Burndown Chart","Release Plan"]', '[0]', 2, 4);
+   264→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6sooo5002dve30b1zczqw3', 'cms6sooo4002bve30gm5iml5c', 'Status invois "Menunggu Kelulusan" bermaksud invois menunggu kelulusan daripada?', 'single', '["Admin Sistem","Pengurus Projek","Pentadbir Projek","Peserta Latihan"]', '[1]', 2, 1);
+   265→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6sooo6002fve30ey7gck0x', 'cms6sooo4002bve30gm5iml5c', 'Invois tertunggak (overdue) berlaku apabila?', 'multiple', '["Tarikh matang telah dilebihi","Status masih belum dibayar","Vendor menuntut bayaran","Semua di atas"]', '[3]', 2, 2);
+   266→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6sooo7002hve30562kkk51', 'cms6sooo4002bve30gm5iml5c', 'Audit trail invois merekodkan setiap perubahan status.', 'true_false', '["Benar","False"]', '[0]', 1, 3);
+   267→INSERT INTO "Question" ("id", "quizId", "text", "type", "options", "answer", "points", "order") VALUES ('cms6sooo7002jve3064fxkcop', 'cms6sooo4002bve30gm5iml5c', 'Dokumen sokongan invois boleh dalam format?', 'multiple', '["PDF","JPEG","PNG","Word"]', '[0,1,2]', 2, 4);
+   268→
+   269→-- Enrollment (13 records)
+   270→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6sooo8002lve30rm9w3tbe', 'cms6soon70004ve30tq52c4ky', 'cms6soonf000nve30j2u39al0', 100, 'selesai', to_timestamp(1785372493545 / 1000.0), to_timestamp(1781481600000 / 1000.0), '/certs/cert-001.pdf', to_timestamp(1783391209225 / 1000.0), to_timestamp(1785372493545 / 1000.0), to_timestamp(1785372493545 / 1000.0));
+   271→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6sooo9002nve3063o6wmtn', 'cms6soon70004ve30tq52c4ky', 'cms6soond000jve30yzaqgezk', 60, 'dalam_proses', to_timestamp(1785372493546 / 1000.0), NULL, NULL, to_timestamp(1783208639685 / 1000.0), to_timestamp(1785372493546 / 1000.0), to_timestamp(1785372493546 / 1000.0));
+   272→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6soooa002pve30b5we8na7', 'cms6soon70004ve30tq52c4ky', 'cms6soone000lve309uwjgqn0', 100, 'selesai', to_timestamp(1785372493546 / 1000.0), to_timestamp(1782950400000 / 1000.0), '/certs/cert-002.pdf', to_timestamp(1783062599645 / 1000.0), to_timestamp(1785372493546 / 1000.0), to_timestamp(1785372493546 / 1000.0));
+   273→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6soooa002rve30b1gmd4gu', 'cms6soon80005ve30urufm8g4', 'cms6soonf000nve30j2u39al0', 75, 'dalam_proses', to_timestamp(1785372493547 / 1000.0), NULL, NULL, to_timestamp(1782927970886 / 1000.0), to_timestamp(1785372493547 / 1000.0), to_timestamp(1785372493547 / 1000.0));
+   274→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6sooob002tve30j2defpr5', 'cms6soon80005ve30urufm8g4', 'cms6soond000hve30eftrszxb', 40, 'dalam_proses', to_timestamp(1785372493547 / 1000.0), NULL, NULL, to_timestamp(1783026370056 / 1000.0), to_timestamp(1785372493547 / 1000.0), to_timestamp(1785372493547 / 1000.0));
+   275→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6soooc002vve30xdftbl34', 'cms6soon80005ve30urufm8g4', 'cms6soonb000bve30hxe6gamv', 25, 'dalam_proses', to_timestamp(1785372493548 / 1000.0), NULL, NULL, to_timestamp(1783944683860 / 1000.0), to_timestamp(1785372493548 / 1000.0), to_timestamp(1785372493548 / 1000.0));
+   276→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6soooc002xve30uqoq8bni', 'cms6soon80007ve300794ma5t', 'cms6soond000hve30eftrszxb', 100, 'selesai', to_timestamp(1785372493549 / 1000.0), to_timestamp(1783641600000 / 1000.0), '/certs/cert-003.pdf', to_timestamp(1784943354204 / 1000.0), to_timestamp(1785372493549 / 1000.0), to_timestamp(1785372493549 / 1000.0));
+   277→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6soood002zve302fi0q90h', 'cms6soon80007ve300794ma5t', 'cms6soonc000fve30f05qk7x7', 50, 'dalam_proses', to_timestamp(1785372493549 / 1000.0), NULL, NULL, to_timestamp(1784573580509 / 1000.0), to_timestamp(1785372493549 / 1000.0), to_timestamp(1785372493549 / 1000.0));
+   278→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6soood0031ve30plzxbii1', 'cms6soon80008ve30t5qu0ycf', 'cms6soonf000nve30j2u39al0', 0, 'belum_mula', to_timestamp(1785372493549 / 1000.0), NULL, NULL, to_timestamp(1784376467690 / 1000.0), to_timestamp(1785372493549 / 1000.0), to_timestamp(1785372493549 / 1000.0));
+   279→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6soood0033ve30wmd4wm25', 'cms6soon80008ve30t5qu0ycf', 'cms6soone000lve309uwjgqn0', 100, 'selesai', to_timestamp(1785372493550 / 1000.0), to_timestamp(1784073600000 / 1000.0), '/certs/cert-004.pdf', to_timestamp(1783221747285 / 1000.0), to_timestamp(1785372493550 / 1000.0), to_timestamp(1785372493550 / 1000.0));
+   280→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6soooe0035ve30jajur1l8', 'cms6soon80008ve30t5qu0ycf', 'cms6soonc000fve30f05qk7x7', 80, 'dalam_proses', to_timestamp(1785372493551 / 1000.0), NULL, NULL, to_timestamp(1784125562688 / 1000.0), to_timestamp(1785372493551 / 1000.0), to_timestamp(1785372493551 / 1000.0));
+   281→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6sooof0037ve30cx5cnvlb', 'cms6soon50000ve307s6otuoq', 'cms6soond000jve30yzaqgezk', 100, 'selesai', to_timestamp(1785372493551 / 1000.0), to_timestamp(1779235200000 / 1000.0), '/certs/cert-005.pdf', to_timestamp(1784031813095 / 1000.0), to_timestamp(1785372493551 / 1000.0), to_timestamp(1785372493551 / 1000.0));
+   282→INSERT INTO "Enrollment" ("id", "userId", "courseId", "progress", "status", "enrolledAt", "completedAt", "certificateUrl", "lastAccessedAt", "createdAt", "updatedAt") VALUES ('cms6sooof0039ve30k9mqnsgi', 'cms6soon70001ve30mj4c5lyg', 'cms6soonb000bve30hxe6gamv', 30, 'dalam_proses', to_timestamp(1785372493552 / 1000.0), NULL, NULL, to_timestamp(1783450874729 / 1000.0), to_timestamp(1785372493552 / 1000.0), to_timestamp(1785372493552 / 1000.0));
+   283→
+   284→-- Project (6 records)
+   285→INSERT INTO "Project" ("id", "projectName", "description", "budget", "projectManagerId", "status", "startDate", "endDate", "createdAt", "updatedAt") VALUES ('cms6sooog003bve30lr8oq8rk', 'Sistem Pentauliahan Pekerja (Onboarding Portal)', 'Pembangunan portal pentauliahan digital untuk pekerja baharu PERKESO.', 450000, 'cms6soon50000ve307s6otuoq', 'aktif', to_timestamp(1768435200000 / 1000.0), to_timestamp(1798675200000 / 1000.0), to_timestamp(1785372493553 / 1000.0), to_timestamp(1785372493553 / 1000.0));
+   286→INSERT INTO "Project" ("id", "projectName", "description", "budget", "projectManagerId", "status", "startDate", "endDate", "createdAt", "updatedAt") VALUES ('cms6soooh003fve30nosptntu', 'Naik Taraf Sistem iGFMAS Modul Pembayaran', 'Penambahbaikan modul pembayaran dalam sistem kewangan iGFMAS.', 1200000, 'cms6soon70001ve30mj4c5lyg', 'aktif', to_timestamp(1769904000000 / 1000.0), to_timestamp(1801353600000 / 1000.0), to_timestamp(1785372493553 / 1000.0), to_timestamp(1785372493553 / 1000.0));
+   287→INSERT INTO "Project" ("id", "projectName", "description", "budget", "projectManagerId", "status", "startDate", "endDate", "createdAt", "updatedAt") VALUES ('cms6sooog003dve30y44v9d80', 'Latihan Keselamatan Siber Kakitangan 2026', 'Program latihan kesedaran keselamatan siber untuk semua kakitangan PERKESO.', 180000, 'cms6soon50000ve307s6otuoq', 'selesai', to_timestamp(1767225600000 / 1000.0), to_timestamp(1782777600000 / 1000.0), to_timestamp(1785372493553 / 1000.0), to_timestamp(1785372493553 / 1000.0));
+   288→INSERT INTO "Project" ("id", "projectName", "description", "budget", "projectManagerId", "status", "startDate", "endDate", "createdAt", "updatedAt") VALUES ('cms6soooj003jve30v3uqoegd', 'Pembangunan Aplikasi Mobile PERKESO Care', 'Aplikasi mudah alih untuk carian caruman dan tuntutan PERKESO.', 670000, 'cms6soon70001ve30mj4c5lyg', 'aktif', to_timestamp(1771113600000 / 1000.0), to_timestamp(1802563200000 / 1000.0), to_timestamp(1785372493555 / 1000.0), to_timestamp(1785372493555 / 1000.0));
+   289→INSERT INTO "Project" ("id", "projectName", "description", "budget", "projectManagerId", "status", "startDate", "endDate", "createdAt", "updatedAt") VALUES ('cms6soooj003lve30yjes02hs', 'Migrasi Data Pencen ke Cloud AWS', 'Pemindahan pangkalan data pencen lama kepada penyelesaian cloud AWS.', 320000, 'cms6soon70001ve30mj4c5lyg', 'aktif', to_timestamp(1775001600000 / 1000.0), to_timestamp(1790726400000 / 1000.0), to_timestamp(1785372493555 / 1000.0), to_timestamp(1785372493555 / 1000.0));
+   290→INSERT INTO "Project" ("id", "projectName", "description", "budget", "projectManagerId", "status", "startDate", "endDate", "createdAt", "updatedAt") VALUES ('cms6soooi003hve309loe3zyn', 'Pelaksanaan CRM untuk Cawangan PERKESO', 'Pengukuhan sistem pengurusan hubungan pelanggan di 10 cawangan utama.', 850000, 'cms6soon50000ve307s6otuoq', 'aktif', to_timestamp(1773100800000 / 1000.0), to_timestamp(1795996800000 / 1000.0), to_timestamp(1785372493555 / 1000.0), to_timestamp(1785372493555 / 1000.0));
+   291→
+   292→-- Invoice (15 records)
+   293→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soook003nve30btcgy77p', 'INV-2026-001', 'cms6sooog003bve30lr8oq8rk', 'TechSoft Solutions Sdn Bhd', 'finance@techsoft.com.my', 45000, to_timestamp(1781484493556 / 1000.0), to_timestamp(1784076493556 / 1000.0), 'dibayar', '/invoices/inv-001.pdf', 'INV-2026-001-TechSoft.pdf', 'cms6soon50000ve307s6otuoq', to_timestamp(1784594893556 / 1000.0), to_timestamp(1785372493556 / 1000.0), 'Pembayaran fasa 1 - siap dan disahkan', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493557 / 1000.0), to_timestamp(1785372493557 / 1000.0));
+   294→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soooq003xve30859r99s4', 'INV-2026-002', 'cms6sooog003bve30lr8oq8rk', 'DesignPro Studio', NULL, 18000, to_timestamp(1783644493556 / 1000.0), to_timestamp(1786236493556 / 1000.0), 'diluluskan', '/invoices/inv-002.pdf', 'INV-2026-002-DesignPro.pdf', 'cms6soon50000ve307s6otuoq', to_timestamp(1785026893556 / 1000.0), NULL, 'Diluluskan untuk bayaran fasa 2', 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493562 / 1000.0), to_timestamp(1785372493562 / 1000.0));
+   295→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6sooot0045ve30j1na89l1', 'INV-2026-003', 'cms6soooh003fve30nosptntu', 'GlobalTech Systems Sdn Bhd', NULL, 150000, to_timestamp(1784076493556 / 1000.0), to_timestamp(1785199693556 / 1000.0), 'tertunggak', '/invoices/inv-003.pdf', 'INV-2026-003-GlobalTech.pdf', 'cms6soon70001ve30mj4c5lyg', to_timestamp(1785113293556 / 1000.0), NULL, 'Diluluskan tetapi bayaran belum dibuat', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493565 / 1000.0), to_timestamp(1785372493565 / 1000.0));
+   296→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6sooov004fve30tw6p4q4d', 'INV-2026-004', 'cms6soooh003fve30nosptntu', 'DataNexus Sdn Bhd', NULL, 75000, to_timestamp(1784681293556 / 1000.0), to_timestamp(1787273293556 / 1000.0), 'menunggu_kelulusan', '/invoices/inv-004.pdf', 'INV-2026-004-DataNexus.pdf', NULL, NULL, NULL, 'Menunggu semakan PM', 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493568 / 1000.0), to_timestamp(1785372493568 / 1000.0));
+   297→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soope004lve30ve8liv8q', 'INV-2026-005', 'cms6soooi003hve309loe3zyn', 'CloudFirst Consulting', NULL, 95000, to_timestamp(1782780493556 / 1000.0), to_timestamp(1785372493556 / 1000.0), 'dibayar', '/invoices/inv-005.pdf', 'INV-2026-005-CloudFirst.pdf', 'cms6soon50000ve307s6otuoq', to_timestamp(1784940493556 / 1000.0), to_timestamp(1785113293556 / 1000.0), 'Pembayaran siap', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493587 / 1000.0), to_timestamp(1785372493587 / 1000.0));
+   298→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soopj004vve30z2sdy9eo', 'INV-2026-006', 'cms6soooi003hve309loe3zyn', 'SalesForce Malaysia', NULL, 280000, to_timestamp(1784940493556 / 1000.0), to_timestamp(1787532493556 / 1000.0), 'menunggu_kelulusan', '/invoices/inv-006.pdf', 'INV-2026-006-SalesForce.pdf', NULL, NULL, NULL, 'Jumlah besar - memerlukan kelulusan PM dan Kewangan', 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493591 / 1000.0), to_timestamp(1785372493591 / 1000.0));
+   299→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soopk0051ve307nuxsjrz', 'INV-2026-007', 'cms6soooj003lve30yjes02hs', 'AWS Malaysia Sdn Bhd', NULL, 60000, to_timestamp(1783212493556 / 1000.0), to_timestamp(1785804493556 / 1000.0), 'diluluskan', '/invoices/inv-007.pdf', 'INV-2026-007-AWS.pdf', 'cms6soon70001ve30mj4c5lyg', to_timestamp(1785113293556 / 1000.0), NULL, 'Diluluskan - bayaran dalam proses', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493593 / 1000.0), to_timestamp(1785372493593 / 1000.0));
+   300→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soopn0059ve300vdwl1qv', 'INV-2026-008', 'cms6soooj003lve30yjes02hs', 'Migrator Pro Sdn Bhd', NULL, 42000, to_timestamp(1784508493556 / 1000.0), to_timestamp(1787100493556 / 1000.0), 'menunggu_kelulusan', '/invoices/inv-008.pdf', 'INV-2026-008-Migrator.pdf', NULL, NULL, NULL, 'Penghantaran dokumen lengkap', 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493595 / 1000.0), to_timestamp(1785372493595 / 1000.0));
+   301→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soopp005fve30hlnum57i', 'INV-2026-009', 'cms6sooog003dve30y44v9d80', 'CyberSafe Training', NULL, 25000, to_timestamp(1780188493556 / 1000.0), to_timestamp(1782780493556 / 1000.0), 'dibayar', '/invoices/inv-009.pdf', 'INV-2026-009-CyberSafe.pdf', 'cms6soon50000ve307s6otuoq', to_timestamp(1784940493556 / 1000.0), to_timestamp(1785286093556 / 1000.0), 'Bayaran penuh - projek selesai', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493598 / 1000.0), to_timestamp(1785372493598 / 1000.0));
+   302→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soops005pve3094zfri3s', 'INV-2026-010', 'cms6sooog003dve30y44v9d80', 'LearnHub Asia', NULL, 12000, to_timestamp(1781052493556 / 1000.0), to_timestamp(1783644493556 / 1000.0), 'ditolak', '/invoices/inv-010.pdf', 'INV-2026-010-LearnHub.pdf', 'cms6soon50000ve307s6otuoq', to_timestamp(1784681293556 / 1000.0), NULL, 'Ditolak - dokumentasi tidak lengkap. Sila hantar semula dengan kontrak ditandatangani.', 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493600 / 1000.0), to_timestamp(1785372493600 / 1000.0));
+   303→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soopw005xve3099b9x19p', 'INV-2026-011', 'cms6soooj003jve30v3uqoegd', 'MobileFirst Sdn Bhd', NULL, 85000, to_timestamp(1785113293556 / 1000.0), to_timestamp(1787705293556 / 1000.0), 'draf', NULL, NULL, NULL, NULL, NULL, NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493604 / 1000.0), to_timestamp(1785372493604 / 1000.0));
+   304→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soopx0061ve30lxnh490m', 'INV-2026-012', 'cms6soooj003jve30v3uqoegd', 'UIUX Studio Asia', NULL, 35000, to_timestamp(1785199693556 / 1000.0), to_timestamp(1787791693556 / 1000.0), 'draf', NULL, NULL, NULL, NULL, NULL, NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493606 / 1000.0), to_timestamp(1785372493606 / 1000.0));
+   305→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6soopy0065ve30wwzi65be', 'INV-2026-013', 'cms6sooog003bve30lr8oq8rk', 'TechSoft Solutions Sdn Bhd', 'finance@techsoft.com.my', 52000, to_timestamp(1785286093556 / 1000.0), to_timestamp(1787878093556 / 1000.0), 'menunggu_kelulusan', '/invoices/inv-013.pdf', 'INV-2026-013-TechSoft.pdf', NULL, NULL, NULL, 'Pembayaran fasa akhir', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493607 / 1000.0), to_timestamp(1785372493607 / 1000.0));
+   306→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6sooq0006bve30weyxl6xv', 'INV-2026-014', 'cms6soooh003fve30nosptntu', 'InfraBuild Sdn Bhd', NULL, 95000, to_timestamp(1781916493556 / 1000.0), to_timestamp(1784508493556 / 1000.0), 'tertunggak', '/invoices/inv-014.pdf', 'INV-2026-014-InfraBuild.pdf', 'cms6soon70001ve30mj4c5lyg', to_timestamp(1784508493556 / 1000.0), NULL, 'Diluluskan - tertunggak bayaran', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493608 / 1000.0), to_timestamp(1785372493608 / 1000.0));
+   307→INSERT INTO "Invoice" ("id", "invoiceNo", "projectId", "vendorName", "vendorEmail", "amount", "invoiceDate", "dueDate", "status", "attachmentUrl", "attachmentName", "approvedById", "approvedAt", "paidAt", "remarks", "createdById", "createdAt", "updatedAt") VALUES ('cms6sooq3006lve30lhh7q5ej', 'INV-2026-015', 'cms6soooi003hve309loe3zyn', 'MarketPro Agency', NULL, 22000, to_timestamp(1782348493556 / 1000.0), to_timestamp(1785804493556 / 1000.0), 'dibayar', '/invoices/inv-015.pdf', 'INV-2026-015-MarketPro.pdf', 'cms6soon50000ve307s6otuoq', to_timestamp(1784508493556 / 1000.0), to_timestamp(1785199693556 / 1000.0), 'Bayaran selesai', 'cms6soon70003ve30o205ihrd', to_timestamp(1785372493612 / 1000.0), to_timestamp(1785372493612 / 1000.0));
+   308→
+   309→-- InvoiceHistory (43 records)
+   310→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soool003pve30l1tq3fya', 'cms6soook003nve30btcgy77p', 'created', NULL, 'draf', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1781484493556 / 1000.0));
+   311→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooom003rve30csm4huuk', 'cms6soook003nve30btcgy77p', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1781570893556 / 1000.0));
+   312→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooon003tve302ix4pjnh', 'cms6soook003nve30btcgy77p', 'approved', 'menunggu_kelulusan', 'diluluskan', 'Pembayaran fasa 1 - siap dan disahkan', 'cms6soon50000ve307s6otuoq', to_timestamp(1784594893556 / 1000.0));
+   313→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soooo003vve308eoko52t', 'cms6soook003nve30btcgy77p', 'paid', 'diluluskan', 'dibayar', 'Pembayaran berjaya dilakukan', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493556 / 1000.0));
+   314→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooor003zve30v424v0iu', 'cms6soooq003xve30859r99s4', 'created', NULL, 'draf', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1783644493556 / 1000.0));
+   315→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooos0041ve30xv2myj03', 'cms6soooq003xve30859r99s4', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1783730893556 / 1000.0));
+   316→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooos0043ve30hk831pld', 'cms6soooq003xve30859r99s4', 'approved', 'menunggu_kelulusan', 'diluluskan', 'Diluluskan untuk bayaran fasa 2', 'cms6soon50000ve307s6otuoq', to_timestamp(1785026893556 / 1000.0));
+   317→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooot0047ve30c496s98r', 'cms6sooot0045ve30j1na89l1', 'created', NULL, 'draf', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1784076493556 / 1000.0));
+   318→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooou0049ve30gaiwyrme', 'cms6sooot0045ve30j1na89l1', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1784162893556 / 1000.0));
+   319→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooou004bve30cfvdqmdl', 'cms6sooot0045ve30j1na89l1', 'approved', 'menunggu_kelulusan', 'diluluskan', 'Diluluskan tetapi bayaran belum dibuat', 'cms6soon70001ve30mj4c5lyg', to_timestamp(1785113293556 / 1000.0));
+   320→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooov004dve306cm29m26', 'cms6sooot0045ve30j1na89l1', 'status_changed', 'diluluskan', 'tertunggak', 'Invois tertunggak - melebihi tarikh matang', 'cms6soon70001ve30mj4c5lyg', to_timestamp(1785372493566 / 1000.0));
+   321→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooow004hve30y3562tmo', 'cms6sooov004fve30tw6p4q4d', 'created', NULL, 'draf', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1784681293556 / 1000.0));
+   322→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopd004jve30c1cpf9e9', 'cms6sooov004fve30tw6p4q4d', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1784767693556 / 1000.0));
+   323→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopf004nve30gedw2bea', 'cms6soope004lve30ve8liv8q', 'created', NULL, 'draf', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1782780493556 / 1000.0));
+   324→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooph004pve30i8mg7dvj', 'cms6soope004lve30ve8liv8q', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1782866893556 / 1000.0));
+   325→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooph004rve30q94i3tqu', 'cms6soope004lve30ve8liv8q', 'approved', 'menunggu_kelulusan', 'diluluskan', 'Pembayaran siap', 'cms6soon50000ve307s6otuoq', to_timestamp(1784940493556 / 1000.0));
+   326→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopi004tve307zgk2kxf', 'cms6soope004lve30ve8liv8q', 'paid', 'diluluskan', 'dibayar', 'Pembayaran berjaya dilakukan', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785113293556 / 1000.0));
+   327→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopj004xve30hsy57thv', 'cms6soopj004vve30z2sdy9eo', 'created', NULL, 'draf', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1784940493556 / 1000.0));
+   328→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopk004zve30k9ff1vc0', 'cms6soopj004vve30z2sdy9eo', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1785026893556 / 1000.0));
+   329→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopl0053ve30ov0a6v7m', 'cms6soopk0051ve307nuxsjrz', 'created', NULL, 'draf', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1783212493556 / 1000.0));
+   330→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopm0055ve30d354wd97', 'cms6soopk0051ve307nuxsjrz', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1783298893556 / 1000.0));
+   331→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopm0057ve308i3eqvlp', 'cms6soopk0051ve307nuxsjrz', 'approved', 'menunggu_kelulusan', 'diluluskan', 'Diluluskan - bayaran dalam proses', 'cms6soon70001ve30mj4c5lyg', to_timestamp(1785113293556 / 1000.0));
+   332→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopo005bve30ju04gruo', 'cms6soopn0059ve300vdwl1qv', 'created', NULL, 'draf', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1784508493556 / 1000.0));
+   333→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopp005dve30aqgjpu3k', 'cms6soopn0059ve300vdwl1qv', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1784594893556 / 1000.0));
+   334→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopq005hve30bt2bw6lt', 'cms6soopp005fve30hlnum57i', 'created', NULL, 'draf', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1780188493556 / 1000.0));
+   335→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopq005jve307z26qnlu', 'cms6soopp005fve30hlnum57i', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1780274893556 / 1000.0));
+   336→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopr005lve30fbma7dh0', 'cms6soopp005fve30hlnum57i', 'approved', 'menunggu_kelulusan', 'diluluskan', 'Bayaran penuh - projek selesai', 'cms6soon50000ve307s6otuoq', to_timestamp(1784940493556 / 1000.0));
+   337→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopr005nve30g1zyplzd', 'cms6soopp005fve30hlnum57i', 'paid', 'diluluskan', 'dibayar', 'Pembayaran berjaya dilakukan', 'cms6soon70002ve30ljyrhky8', to_timestamp(1785286093556 / 1000.0));
+   338→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopt005rve30uey2hfrw', 'cms6soops005pve3094zfri3s', 'created', NULL, 'draf', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1781052493556 / 1000.0));
+   339→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopu005tve302wzre7ro', 'cms6soops005pve3094zfri3s', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1781138893556 / 1000.0));
+   340→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopv005vve30a8rsll2m', 'cms6soops005pve3094zfri3s', 'rejected', 'menunggu_kelulusan', 'ditolak', 'Ditolak - dokumentasi tidak lengkap. Sila hantar semula dengan kontrak ditandatangani.', 'cms6soon50000ve307s6otuoq', to_timestamp(1784681293556 / 1000.0));
+   341→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopx005zve30pie8eeml', 'cms6soopw005xve3099b9x19p', 'created', NULL, 'draf', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1785113293556 / 1000.0));
+   342→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopy0063ve302v544kgo', 'cms6soopx0061ve30lxnh490m', 'created', NULL, 'draf', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1785199693556 / 1000.0));
+   343→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopz0067ve30hmsmem7l', 'cms6soopy0065ve30wwzi65be', 'created', NULL, 'draf', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1785286093556 / 1000.0));
+   344→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6soopz0069ve309gdfqz0q', 'cms6soopy0065ve30wwzi65be', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1785372493556 / 1000.0));
+   345→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooq1006dve30fcnqgajs', 'cms6sooq0006bve30weyxl6xv', 'created', NULL, 'draf', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1781916493556 / 1000.0));
+   346→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooq1006fve30w642lgms', 'cms6sooq0006bve30weyxl6xv', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70002ve30ljyrhky8', to_timestamp(1782002893556 / 1000.0));
+   347→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooq2006hve3073i74u5i', 'cms6sooq0006bve30weyxl6xv', 'approved', 'menunggu_kelulusan', 'diluluskan', 'Diluluskan - tertunggak bayaran', 'cms6soon70001ve30mj4c5lyg', to_timestamp(1784508493556 / 1000.0));
+   348→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooq3006jve30dgxthnxx', 'cms6sooq0006bve30weyxl6xv', 'status_changed', 'diluluskan', 'tertunggak', 'Invois tertunggak - melebihi tarikh matang', 'cms6soon70001ve30mj4c5lyg', to_timestamp(1785372493610 / 1000.0));
+   349→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooq4006nve30iymzw7na', 'cms6sooq3006lve30lhh7q5ej', 'created', NULL, 'draf', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1782348493556 / 1000.0));
+   350→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooq5006pve30xz66mwks', 'cms6sooq3006lve30lhh7q5ej', 'status_changed', 'draf', 'menunggu_kelulusan', NULL, 'cms6soon70003ve30o205ihrd', to_timestamp(1782434893556 / 1000.0));
+   351→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooq6006rve30i3stobza', 'cms6sooq3006lve30lhh7q5ej', 'approved', 'menunggu_kelulusan', 'diluluskan', 'Bayaran selesai', 'cms6soon50000ve307s6otuoq', to_timestamp(1784508493556 / 1000.0));
+   352→INSERT INTO "InvoiceHistory" ("id", "invoiceId", "action", "fromStatus", "toStatus", "remarks", "userId", "createdAt") VALUES ('cms6sooq6006tve30jzz9esaf', 'cms6sooq3006lve30lhh7q5ej', 'paid', 'diluluskan', 'dibayar', 'Pembayaran berjaya dilakukan', 'cms6soon70003ve30o205ihrd', to_timestamp(1785199693556 / 1000.0));
+   353→
+   354→-- Notification (10 records)
+   355→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooq7006vve307xpc2fs2', 'cms6soon50000ve307s6otuoq', 'Invois Tertunggak Memerlukan Tindakan', 'INV-2026-003 daripada GlobalTech Systems Sdn Bhd telah melebihi tarikh matang. Sila uruskan bayaran.', 'error', 'invoice', true, 'invoices', to_timestamp(1785152340611 / 1000.0));
+   356→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooq8006xve300kuqw9ik', 'cms6soon50000ve307s6otuoq', 'Invois Baharu Menunggu Kelulusan', 'INV-2026-013 sebanyak RM 52,000 menunggu kelulusan anda.', 'warning', 'invoice', false, 'invoices', to_timestamp(1785286576677 / 1000.0));
+   357→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooq9006zve30qsqshne5', 'cms6soon70001ve30mj4c5lyg', '2 Invois Menunggu Kelulusan', 'Anda mempunyai 2 invois menunggu semakan: INV-2026-004 dan INV-2026-008.', 'warning', 'invoice', true, 'invoices', to_timestamp(1785371120763 / 1000.0));
+   358→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooqb0071ve30wfwn88sb', 'cms6soon70001ve30mj4c5lyg', 'Invois Besar Memerlukan Perhatian', 'INV-2026-006 sebanyak RM 280,000 memerlukan kelulusan PM dan Kewangan.', 'warning', 'invoice', true, 'invoices', to_timestamp(1785293913358 / 1000.0));
+   359→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooqc0073ve30gae0gby7', 'cms6soon70004ve30tq52c4ky', 'Selamat Datang ke LMS PERKESO', 'Anda telah didaftarkan ke 3 kursus latihan. Sila mula pembelajaran anda.', 'info', 'course', true, 'my-learning', to_timestamp(1785177779097 / 1000.0));
+   360→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooqd0075ve30miyhogcf', 'cms6soon70004ve30tq52c4ky', 'Sijil Diterima', 'Tahniah! Anda telah menamatkan kursus "Asas Pengurusan Projek (PMBOK 7)". Sijil sedia untuk dimuat turun.', 'success', 'course', true, 'my-learning', to_timestamp(1785254228647 / 1000.0));
+   361→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooqd0077ve30bkt2gbhu', 'cms6soon80005ve30urufm8g4', 'Kursus Baharu Tersedia', 'Kursus "Pengurusan Invois & Kawalan Kewangan Projek" kini tersedia untuk pendaftaran.', 'info', 'course', false, 'courses', to_timestamp(1785000669421 / 1000.0));
+   362→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooqe0079ve303466p9yz', 'cms6soon80007ve300794ma5t', 'Sijil Diterima', 'Tahniah! Anda telah menamatkan kursus Pengurusan Invois.', 'success', 'course', false, 'my-learning', to_timestamp(1785190460345 / 1000.0));
+   363→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooqf007bve30w1ua4cbj', 'cms6soon80008ve30t5qu0ycf', 'Selamat Datang ke LMS PERKESO', 'Anda telah didaftarkan ke 3 kursus. Mulakan pembelajaran anda sekarang.', 'info', 'course', false, 'my-learning', to_timestamp(1784996919512 / 1000.0));
+   364→INSERT INTO "Notification" ("id", "userId", "title", "message", "type", "category", "isRead", "link", "createdAt") VALUES ('cms6sooqg007dve30xmwozj6p', 'cms6soon80006ve30gznhgpgx', 'Laporan Kewangan Bulanan Sedia', 'Laporan ringkasan kewangan projek untuk Julai 2026 sedia untuk semakan.', 'info', 'system', false, 'reports', to_timestamp(1785284485933 / 1000.0));
+   365→
+   366→SET session_replication_role = 'origin';
+   367→
+   368→-- Seed complete! LMS-ITS PERKESO dummy data loaded.
+   369→--
+   370→-- Login credentials:
+   371→--   admin@perkeso.gov.my / admin123 (Pentadbir Sistem)
+   372→--   pm@perkeso.gov.my / pm123 (Pengurus Projek)
+   373→--   padmin@perkeso.gov.my / padmin123 (Pentadbir Projek)
+   374→--   staff1@perkeso.gov.my / staff123 (Peserta Latihan)
+   375→--   upper@perkeso.gov.my / upper123 (Pengurusan Atasan)
+   376→
